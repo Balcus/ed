@@ -1,69 +1,84 @@
-use std::io::{stdout, Write};
-use crossterm::{cursor::{Hide, Show}, queue, style::Print, terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType}};
+use crossterm::cursor::{Hide, MoveTo, Show};
+use crossterm::style::Print;
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode, size, Clear, ClearType};
+use crossterm::{queue, Command};
+use std::io::{stdout, Error, Write};
+use core::fmt::Display;
 
+#[derive(Copy, Clone)]
 pub struct Size {
     pub height: u16,
-    pub _width: u16,
+    pub width: u16,
 }
-
-pub struct _CursorPos {
-    row: u16,
-    col: u16,
+#[derive(Copy, Clone)]
+pub struct CursorPos {
+    pub row: u16,
+    pub col: u16,
 }
-pub struct Terminal {}
+pub struct Terminal;
 
 impl Terminal {
 
-    pub fn init() -> Result<(), std::io::Error> {
-        enable_raw_mode()?;
-        Self::clear()?;
-        Self::move_cursor(0, 0)?;
-        Ok(())
-    }
-
-    pub fn terminate() -> Result<(), std::io::Error> {
-        Self::move_cursor(0, 0)?;
-        println!("Thank you for using ed!");
+    // run when closing editor
+    pub fn terminate() -> Result<(), Error> {
+        Self::execute()?;
         disable_raw_mode()?;
         Ok(())
     }
 
-    pub fn clear() -> Result<(), std::io::Error> {
-        let mut stdout = stdout();
-        queue!(stdout, Clear(ClearType::All))
-    }
-
-    pub fn size() -> Result<Size, std::io::Error> {
-        let (w, h) = crossterm::terminal::size()?;
-        Ok(Size {
-            height: h,
-            _width: w,
-        })
-    }
-
-    pub fn move_cursor(row: u16, col:u16) -> Result<(), std::io::Error> {
-        queue!(stdout(), crossterm::cursor::MoveTo(col, row))?;
+    // run when first opening editor
+    pub fn init() -> Result<(), Error> {
+        enable_raw_mode()?;
+        Self::clear()?;
+        Self::move_cursor(CursorPos { row: 0, col: 0 })?;
+        Self::execute()?;
         Ok(())
     }
 
-    pub fn hide_cursor() -> Result<(), std::io::Error> {
-        queue!(stdout(), Hide)?;
+    // clears entire screen
+    pub fn clear() -> Result<(), Error> {
+        Self::queue_command(Clear(ClearType::All))?;
         Ok(())
     }
 
-    pub fn show_cursor() -> Result<(), std::io::Error> {
-        queue!(stdout(), Show)?;
+    // cleears a line
+    pub fn clear_line() -> Result<(), Error> {
+        Self::queue_command(Clear(ClearType::CurrentLine))?;
+        Ok(())
+    }
+    pub fn move_cursor(position: CursorPos) -> Result<(), Error> {
+        Self::queue_command(MoveTo(position.row, position.col))?;
         Ok(())
     }
 
-    pub fn print(string: &str) -> Result<(), std::io::Error> {
-        queue!(stdout(), Print(string))?;
+    pub fn hide_cursor() -> Result<(), Error> {
+        Self::queue_command(Hide)?;
+        Ok(())
+    }
+    pub fn show_cursor() -> Result<(), Error> {
+        Self::queue_command(Show)?;
         Ok(())
     }
 
-    pub fn execute() -> Result<(), std::io::Error> {
+    pub fn print<T: Display>(string: T) -> Result<(), Error> {
+        Self::queue_command(Print(string))?;
+        Ok(())
+    }
+
+    pub fn size() -> Result<Size, Error> {
+        let (width, height) = size()?;
+        Ok(Size { height, width })
+    }
+
+    // prints the output buffer
+    pub fn execute() -> Result<(), Error> {
         stdout().flush()?;
         Ok(())
     }
 
+    fn queue_command<T:Command>(command: T) -> Result<(), Error> {
+        queue!(stdout(), command)?;
+        Ok(())
+    }
+    
 }
