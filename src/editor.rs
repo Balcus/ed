@@ -1,7 +1,7 @@
 use crate::terminal::Terminal;
-use crossterm::event::{read, Event, KeyEvent, KeyModifiers};
-use crossterm::event::Event::Key;
-use crossterm::event::KeyCode::Char;
+use std::io::Write;
+use crossterm::{event::{read, Event, KeyEvent, KeyModifiers, Event::Key, KeyCode::Char}, queue, style::Print};
+use std::io::stdout;
 
 pub struct Editor {
     should_quit: bool,
@@ -38,7 +38,10 @@ impl Editor {
         loop {
             let event = read()?;
             self.process_event(&event);
+            Terminal::hide_cursor()?;
             self.refresh_screen()?;
+            stdout().flush()?;
+            Terminal::show_cursor()?;
             if self.should_quit {
                 break;
             }
@@ -63,7 +66,7 @@ impl Editor {
             Terminal::move_cursor(row, 0)?;
             print!("~");
             if row + 1 < height {
-                print!("\r\n");
+                queue!(stdout(), Print("\r\n"))?;
             }
         }
         Ok(())
