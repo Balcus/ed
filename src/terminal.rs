@@ -1,12 +1,12 @@
-use std::io::stdout;
-use crossterm::{cursor::Hide, cursor::Show, queue, terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType}};
+use std::io::{stdout, Write};
+use crossterm::{cursor::{Hide, Show}, queue, style::Print, terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType}};
 
 pub struct Size {
-    height: u16,
-    width: u16,
+    pub height: u16,
+    pub _width: u16,
 }
 
-pub struct Cursor_pos {
+pub struct _CursorPos {
     row: u16,
     col: u16,
 }
@@ -33,8 +33,12 @@ impl Terminal {
         queue!(stdout, Clear(ClearType::All))
     }
 
-    pub fn size() -> Result<(u16, u16), std::io::Error> {
-        crossterm::terminal::size()
+    pub fn size() -> Result<Size, std::io::Error> {
+        let (w, h) = crossterm::terminal::size()?;
+        Ok(Size {
+            height: h,
+            _width: w,
+        })
     }
 
     pub fn move_cursor(row: u16, col:u16) -> Result<(), std::io::Error> {
@@ -49,6 +53,16 @@ impl Terminal {
 
     pub fn show_cursor() -> Result<(), std::io::Error> {
         queue!(stdout(), Show)?;
+        Ok(())
+    }
+
+    pub fn print(string: &str) -> Result<(), std::io::Error> {
+        queue!(stdout(), Print(string))?;
+        Ok(())
+    }
+
+    pub fn execute() -> Result<(), std::io::Error> {
+        stdout().flush()?;
         Ok(())
     }
 

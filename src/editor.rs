@@ -1,7 +1,5 @@
 use crate::terminal::Terminal;
-use std::io::Write;
-use crossterm::{event::{read, Event, KeyEvent, KeyModifiers, Event::Key, KeyCode::Char}, queue, style::Print};
-use std::io::stdout;
+use crossterm::event::{read, Event, KeyEvent, KeyModifiers, Event::Key, KeyCode::Char};
 
 pub struct Editor {
     should_quit: bool,
@@ -40,7 +38,7 @@ impl Editor {
             self.process_event(&event);
             Terminal::hide_cursor()?;
             self.refresh_screen()?;
-            stdout().flush()?;
+            Terminal::execute()?;
             Terminal::show_cursor()?;
             if self.should_quit {
                 break;
@@ -61,12 +59,13 @@ impl Editor {
     }
 
     fn draw_rows() -> Result<(), std::io::Error> {
-        let height = Terminal::size()?.1;
+        let size = Terminal::size()?;
+        let height = size.height;
         for row in 0..height {
             Terminal::move_cursor(row, 0)?;
-            print!("~");
+            Terminal::print("~")?;
             if row + 1 < height {
-                queue!(stdout(), Print("\r\n"))?;
+                Terminal::print("\r\n")?;
             }
         }
         Ok(())
