@@ -7,13 +7,13 @@ use core::fmt::Display;
 
 #[derive(Copy, Clone)]
 pub struct Size {
-    pub height: u16,
-    pub width: u16,
+    pub height: usize,
+    pub width: usize,
 }
-#[derive(Copy, Clone)]
-pub struct CursorPos {
-    pub row: u16,
-    pub col: u16,
+#[derive(Copy, Clone, Default)]
+pub struct Position {
+    pub row: usize,
+    pub col: usize,
 }
 pub struct Terminal;
 
@@ -30,7 +30,6 @@ impl Terminal {
     pub fn init() -> Result<(), Error> {
         enable_raw_mode()?;
         Self::clear()?;
-        Self::move_cursor(CursorPos { row: 0, col: 0 })?;
         Self::execute()?;
         Ok(())
     }
@@ -46,16 +45,16 @@ impl Terminal {
         Self::queue_command(Clear(ClearType::CurrentLine))?;
         Ok(())
     }
-    pub fn move_cursor(position: CursorPos) -> Result<(), Error> {
-        Self::queue_command(MoveTo(position.row, position.col))?;
+    pub fn move_caret(position: Position) -> Result<(), Error> {
+        Self::queue_command(MoveTo(position.col as u16, position.row as u16))?;
         Ok(())
     }
 
-    pub fn hide_cursor() -> Result<(), Error> {
+    pub fn hide_caret() -> Result<(), Error> {
         Self::queue_command(Hide)?;
         Ok(())
     }
-    pub fn show_cursor() -> Result<(), Error> {
+    pub fn show_caret() -> Result<(), Error> {
         Self::queue_command(Show)?;
         Ok(())
     }
@@ -66,7 +65,9 @@ impl Terminal {
     }
 
     pub fn size() -> Result<Size, Error> {
-        let (width, height) = size()?;
+        let (width_u16, height_u16) = size()?;
+        let height = height_u16 as usize;
+        let width = width_u16 as usize;
         Ok(Size { height, width })
     }
 

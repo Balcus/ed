@@ -4,6 +4,6 @@ mod terminal;
 use editor::Editor;
 
 fn main() {
-    let mut ed = Editor::new();
+    let mut ed = Editor::default();
     ed.run();
 }
