@@ -1,25 +1,54 @@
-use crate::terminal::{Terminal, Size};
+use crate::terminal::{Size, Terminal};
 use std::io::Error;
+use crate::buffer::Buffer;
 
 const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION"); 
 
-#[derive(Default)]
-pub struct View;
+#[derive(Default, Debug)]
+pub struct View {
+    pub buffer: Buffer,
+}
 
 impl View {
-    pub fn render() -> Result<(), Error> {
+
+    pub fn render(&self) -> Result<(), Error> {
+        if self.buffer.is_empty() {
+            Self::render_welcome_screen()?;
+        }else {
+            self.render_buffer()?;
+        }
+        Ok(())
+    }
+
+    pub fn render_welcome_screen() -> Result<(), Error> {
         let Size {height, ..} = Terminal::size()?;
         for row in 0..height {
             Terminal::clear_line()?;
-            if row == 0 {
-                Terminal::print("Hello World!")?;
-            }
-            else if row == height / 3 {
+            
+            if row == height / 3 {
                 Self::draw_welcome_message()?;
-            }else {
+            } else {
                 Self::draw_empty_row()?;
             }
+
+            if row.saturating_add(1) < height {
+                Terminal::print("\r\n")?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn render_buffer(&self) -> Result<(), Error> {
+        let Size {height, ..} = Terminal::size()?;
+        for row in 0..height {
+            Terminal::clear_line()?;
+            if let Some(line) = self.buffer.lines.get(row) {
+                Terminal::print(line)?;
+                Terminal::print("\r\n")?;
+                continue;
+            }
+            Self::draw_empty_row()?;
             if row.saturating_add(1) < height {
                 Terminal::print("\r\n")?;
             }
@@ -42,5 +71,11 @@ impl View {
         welcome_message.truncate(width);
         Terminal::print(welcome_message.as_str())?;
         Ok(())
+    }
+
+    pub fn load(&mut self, filename: &str) {
+        if let Ok(buffer) = Buffer::load(filename) {
+            self.buffer = buffer;
+        }
     }
 }

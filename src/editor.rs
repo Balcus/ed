@@ -2,14 +2,16 @@ use crate::terminal::{Position, Size, Terminal};
 use crate::view::View;
 use crossterm::event::{read, Event::{self, Key}, KeyCode::{self, Char}, KeyEvent, KeyEventKind, KeyModifiers};
 use core::cmp::min;
+use std::{env, io::Error};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Editor {
     should_quit: bool,
     location: Location,
+    view: View,
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug)]
 pub struct  Location {
     x: usize,
     y: usize,
@@ -20,19 +22,27 @@ impl Editor {
     // strats the editor
     pub fn run(&mut self) {
         Terminal::init().unwrap();
+        self.handle_args();
         let result = self.repl();
         Terminal::terminate().unwrap();
         result.unwrap();
     }
 
+    pub fn handle_args(&mut self) {
+        let args: Vec<String> = env::args().collect();
+        if let Some(filename) = args.get(1) {
+            self.view.load(filename);
+        }
+    }
+
     // updates screen
-    fn refresh_screen(&self) -> Result<(), std::io::Error> {
+    fn refresh_screen(&self) -> Result<(), Error> {
         Terminal::hide_caret()?;
         Terminal::move_caret(Position::default())?;
         if self.should_quit {
             Terminal::clear()?;
         } else {
-            View::render()?;
+            self.view.render()?;
             Terminal::move_caret(Position {
                 row: (self.location.y),
                 col: (self.location.x) 
@@ -44,7 +54,7 @@ impl Editor {
     }
 
     // updates screen and reads the event to be processed
-    fn repl(&mut self) -> Result<(), std::io::Error> {
+    fn repl(&mut self) -> Result<(), Error> {
         loop {
             self.refresh_screen()?;
             if self.should_quit {
@@ -57,7 +67,7 @@ impl Editor {
     }
 
     // processes keyboard events
-    fn process_event(&mut self, event: &Event) -> Result<(), std::io::Error> {
+    fn process_event(&mut self, event: &Event) -> Result<(), Error> {
         if let Key(KeyEvent { 
             code, 
             modifiers, 
@@ -83,7 +93,7 @@ impl Editor {
         Ok(())
     }
 
-    fn move_point(&mut self, keycode: KeyCode) -> Result<(), std::io::Error> {
+    fn move_point(&mut self, keycode: KeyCode) -> Result<(), Error> {
         let Location {mut x, mut y} = self.location;
         let Size {height, width} = Terminal::size()?;
         match keycode {
