@@ -1,6 +1,6 @@
 use crossterm::cursor::{Hide, MoveTo, Show};
 use crossterm::style::Print;
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, size, Clear, ClearType};
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode, size, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::{queue, Command};
 use std::io::{stdout, Error, Write};
 
@@ -9,37 +9,65 @@ pub struct Size {
     pub height: usize,
     pub width: usize,
 }
+
+impl Size {
+    pub fn new(width: usize, height: usize) -> Self {
+        Size {
+            width,
+            height
+        }
+    }
+}
+
 #[derive(Copy, Clone, Default)]
 pub struct Position {
     pub row: usize,
     pub col: usize,
 }
+
+impl Position {
+    pub fn new(row: usize, col: usize) -> Self {
+        Self {
+            row,
+            col
+        }
+    }
+}
 pub struct Terminal;
 
 impl Terminal {
 
-    // run when closing editor
     pub fn terminate() -> Result<(), Error> {
+        Self::leave_alternate_screen()?;
+        Self::show_caret()?;
         Self::execute()?;
         disable_raw_mode()?;
         Ok(())
     }
 
-    // run when first opening editor
     pub fn init() -> Result<(), Error> {
+        Self::enter_alternate_screen()?;
         enable_raw_mode()?;
         Self::clear()?;
         Self::execute()?;
         Ok(())
     }
 
-    // clears entire screen
+    pub fn enter_alternate_screen() -> Result<(), Error> {
+        Self::queue_command(EnterAlternateScreen)?;
+        Ok(())
+    }
+
+    pub fn leave_alternate_screen() -> Result<(), Error> {
+        Self::queue_command(LeaveAlternateScreen)?;
+        Ok(())
+    }
+
     pub fn clear() -> Result<(), Error> {
         Self::queue_command(Clear(ClearType::All))?;
         Ok(())
     }
 
-    // cleears a line
     pub fn clear_line() -> Result<(), Error> {
         Self::queue_command(Clear(ClearType::CurrentLine))?;
         Ok(())
@@ -63,6 +91,13 @@ impl Terminal {
         Ok(())
     }
 
+    pub fn print_row(row: usize, line_text: &str) -> Result<(), Error> {
+        Self::move_caret(Position::new(row, 0))?;
+        Self::clear_line()?;
+        Self::print(line_text)?;
+        Ok(())
+    }
+
     pub fn size() -> Result<Size, Error> {
         let (width_u16, height_u16) = size()?;
         let height = height_u16 as usize;
@@ -76,7 +111,7 @@ impl Terminal {
         Ok(())
     }
 
-    fn queue_command<T:Command>(command: T) -> Result<(), Error> {
+    fn queue_command<T: Command>(command: T) -> Result<(), Error> {
         queue!(stdout(), command)?;
         Ok(())
     }
