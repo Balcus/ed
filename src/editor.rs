@@ -1,6 +1,6 @@
 use crate::terminal::{Position, Size, Terminal};
 use crate::view::View;
-use crossterm::event::{read, Event::{self, Key}, KeyCode::{self, Char}, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{read, Event, KeyCode::{self, Char}, KeyEvent, KeyModifiers};
 use core::cmp::min;
 use std::{env, io::Error};
 
@@ -36,7 +36,7 @@ impl Editor {
     }
 
     // updates screen
-    fn refresh_screen(&self) -> Result<(), Error> {
+    fn refresh_screen(&mut self) -> Result<(), Error> {
         Terminal::hide_caret()?;
         Terminal::move_caret(Position::default())?;
         if self.should_quit {
@@ -57,38 +57,52 @@ impl Editor {
     fn repl(&mut self) -> Result<(), Error> {
         loop {
             self.refresh_screen()?;
+
             if self.should_quit {
                 break;
             }
             let event = read()?;
-            self.process_event(&event)?;
+            self.process_event(event)?;
         }
         Ok(())
     }
 
     // processes keyboard events
-    fn process_event(&mut self, event: &Event) -> Result<(), Error> {
-        if let Key(KeyEvent { 
-            code, 
-            modifiers, 
-            kind: KeyEventKind::Press, 
-            state: _ }) = event {
-            match code {
-                Char('q') if *modifiers == KeyModifiers::CONTROL => {
-                    self.should_quit = true;
-                },
-                KeyCode::Up
-                | KeyCode::Down
-                | KeyCode::Left
-                | KeyCode::Right
-                | KeyCode::PageUp
-                | KeyCode::PageDown
-                | KeyCode::Home
-                | KeyCode::End => {
-                    self.move_point(*code)?;
+    fn process_event(&mut self, event: Event) -> Result<(), Error> {
+        match event {
+            Event::Key(KeyEvent {
+                code, 
+                modifiers, 
+                ..}) => {
+                    match code {
+                        Char('q') if modifiers == KeyModifiers::CONTROL => {
+                            self.should_quit = true;
+                        },
+
+                        KeyCode::Up
+                        | KeyCode::Down
+                        | KeyCode::Left
+                        | KeyCode::Right
+                        | KeyCode::PageUp
+                        | KeyCode::PageDown
+                        | KeyCode::Home
+                        | KeyCode::End => {
+                            self.move_point(code)?;
+                        }
+                        _ => ()
+                    }
                 }
-                _ => ()
+            Event::Resize(width_u16, height_u16 ) => {
+                #[allow(clippy::as_conversions)]
+                let width = width_u16 as usize;
+                #[allow(clippy::as_conversions)]
+                let height = height_u16 as usize;
+                self.view.resize(Size {
+                    width,
+                    height
+                });
             }
+            _ => ()
         }
         Ok(())
     }
