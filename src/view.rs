@@ -1,7 +1,9 @@
+use crate::line::Line;
 use crate::terminal::{Size, Terminal, Position};
 use crate::buffer::Buffer;
 use crate::editor_commands::{Command, Direction::{self, Up, Down, Left, Right, PageDown, PageUp, Home, End}};
 use crate::location::Location;
+use std::cmp::min;
 
 const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION"); 
@@ -53,6 +55,7 @@ impl View {
         }
         self.needs_redraw = false;
     }
+    
     pub fn handle_command(&mut self, command: Command) {
         match command {
             Command::Resize(size) => self.resize(size),
@@ -60,6 +63,7 @@ impl View {
             Command::Quit => {}
         }
     }
+
     pub fn load(&mut self, file_name: &str) {
         if let Ok(buffer) = Buffer::load(file_name) {
             self.buffer = buffer;
@@ -73,33 +77,35 @@ impl View {
 
     fn move_text_location(&mut self, direction: &Direction) {
         let Location { mut x, mut y } = self.location;
-        let Size { height, width } = self.size;
+        let Size { height, .. } = self.size;
+
         match direction {
-            Up => {
-                y = y.saturating_sub(1);
-            }
-            Down => {
-                y = y.saturating_add(1);
-            }
+            Up => y = y.saturating_sub(1),
+            Down => y = y.saturating_add(1),
             Left => {
-                x = x.saturating_sub(1);
+                if x > 0 {
+                    x -= 1;
+                } else if y > 0 {
+                    y -= 1;
+                    x = self.buffer.lines.get(y).map_or(0, Line::len);
+                }
             }
             Right => {
-                x = x.saturating_add(1);
+                if x < self.buffer.lines.get(y).map_or(0, Line::len) {
+                    x += 1;
+                } else {
+                    y = y.saturating_add(1);
+                    x = 0;
+                }
             }
-            PageUp => {
-                y = 0;
-            }
-            PageDown => {
-                y = height.saturating_sub(1);
-            }
-            Home => {
-                x = 0;
-            }
-            End => {
-                x = width.saturating_sub(1);
-            }
+            PageUp => y = y.saturating_sub(height).saturating_sub(1),
+            PageDown => y = y.saturating_add(height).saturating_sub(1),
+            Home => x = 0,
+            End => x = self.buffer.lines.get(y).map_or(0, Line::len),
         }
+        y = min(y, self.buffer.lines.len());
+        x = self.buffer.lines.get(y).map_or(0, |line| min(line.len(), x));
+
         self.location = Location { x, y };
         self.scroll_location_into_view();
     }
