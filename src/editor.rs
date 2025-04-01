@@ -5,7 +5,6 @@ use crossterm::event::{read, Event, KeyEvent};
 use std::{env, io::Error};
 use crate::editor_commands::Command;
 
-#[derive(Debug)]
 pub struct Editor {
     should_quit: bool,
     view: View,
@@ -53,8 +52,8 @@ impl Editor {
 
     fn refresh_screen(&mut self) {
         let _ = Terminal::hide_caret();
-        self.view.render();
-        let _ = Terminal::move_caret(self.view.get_position());
+        self.view.render(); 
+        let _ = Terminal::move_caret(self.view.get_caret_position());
         let _ = Terminal::show_caret();
         let _ = Terminal::execute();
     }

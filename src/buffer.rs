@@ -1,6 +1,6 @@
 use std::{fs::read_to_string, io::Error};
 use crate::line::Line;
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct Buffer {
     pub lines: Vec<Line>
 }
@@ -20,5 +20,9 @@ impl Buffer {
         Ok(Self {
             lines,
         })
+    }
+
+    pub fn number_of_lines(&self) -> usize {
+        self.lines.len()
     }
 }
