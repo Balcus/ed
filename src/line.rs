@@ -8,9 +8,9 @@ enum GraphemeWidth {
 }
 
 pub struct Fragment {
-    grapheme: String,
+    pub grapheme: String,
     render_width: GraphemeWidth,
-    replacement: Option<char>,
+    pub replacement: Option<char>,
 }
 
 pub struct Line {
@@ -115,5 +115,9 @@ impl Line {
                 }
             })
             .sum()
+    }
+
+    pub fn get_fragments(&self) -> &Vec<Fragment> {
+        &self.fragments
     }
 }

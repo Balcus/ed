@@ -130,6 +130,25 @@ impl View {
 
     // Movement functions 
 
+    fn move_text_location(&mut self, direction: &Direction) {
+        let Size { height, .. } = self.size;
+
+        match direction {
+            Up => self.move_up(1),
+            Down => self.move_down(1),
+            Left => self.move_left(),
+            Right => self.move_right(),
+            PageUp => self.move_up(height.saturating_sub(1)),
+            PageDown => self.move_down(height.saturating_sub(1)),
+            Home => self.move_to_beggining_of_line(),
+            End => self.move_to_end_of_line(),
+            WordJumpRight => self.jump_word_right(),
+            WordJumpLeft => self.jump_word_left(),
+        }
+
+        self.scroll_text_location_into_view();
+    }
+
     fn move_up(&mut self, step: usize) {
         self.text_location.line_index = self.text_location.line_index.saturating_sub(step);
         self.snap_to_valid_grapheme();
@@ -174,33 +193,71 @@ impl View {
         self.text_location.grapheme_index = 0;
     }
 
-    fn move_text_location(&mut self, direction: &Direction) {
-        let Size { height, .. } = self.size;
+    /*
+        Jump word functions will move the caret FROM inside a word TO the first space met (either to the left or right).
+        They do not take into consideration any other separator such as: ',' , '.' , ':' , ... 
+    */ 
+    fn jump_word_right(&mut self) {
+        if let Some(buffer_line) = self.buffer.lines.get(self.text_location.line_index) {
+            let grapheme_count = buffer_line.grapheme_count();
 
-        match direction {
-            Up => self.move_up(1),
-            Down => self.move_down(1),
-            Left => self.move_left(),
-            Right => self.move_right(),
-            PageUp => self.move_up(height.saturating_sub(1)),
-            PageDown => self.move_down(height.saturating_sub(1)),
-            Home => self.move_to_beggining_of_line(),
-            End => self.move_to_end_of_line(),
-            WordJumpRight => {},
-            WordJumpLeft => {},
+            if self.text_location.grapheme_index >= grapheme_count {
+                self.move_to_beggining_of_line();
+                self.move_down(1);
+                return;
+            }
+
+            let mut curr_index = self.text_location.grapheme_index;
+            while curr_index < grapheme_count {
+                if let Some(fragment) = buffer_line.get_fragments().get(curr_index) {
+                    let is_white_space = fragment.grapheme.trim().is_empty() || 
+                        fragment.replacement == Some('␣') ||
+                        fragment.replacement == Some(' ');
+
+                    if is_white_space {
+                        break;
+                    }
+                    
+                    curr_index = curr_index.saturating_add(1);
+                } else {
+                    break;
+                }
+            }
+            self.text_location.grapheme_index = curr_index;
         }
+    }
 
-        self.scroll_text_location_into_view();
+    fn jump_word_left(&mut self) {
+        if let Some(buffer_line) = self.buffer.lines.get(self.text_location.line_index) {
+
+            if self.text_location.grapheme_index <= 0 {
+                self.move_to_beggining_of_line();
+                self.move_up(1);
+                return;
+            }
+
+            let mut curr_index = self.text_location.grapheme_index;
+            while curr_index > 0 {
+                if let Some(fragment) = buffer_line.get_fragments().get(curr_index) {
+                    let is_white_space = fragment.grapheme.trim().is_empty() || 
+                        fragment.replacement == Some('␣') ||
+                        fragment.replacement == Some(' ');
+
+                    if is_white_space {
+                        break;
+                    }
+                    
+                    curr_index = curr_index.saturating_sub(1);
+                } else {
+                    break;
+                }
+            }
+            self.text_location.grapheme_index = curr_index;
+        }
     }
 
 
     // Scroll text
-    
-    fn scroll_text_location_into_view(&mut self) {
-        let Position{ row, col } = self.text_location_to_position();
-        self.scroll_vertically(row);
-        self.scroll_horizontally(col);
-    }
 
     fn scroll_horizontally(&mut self, to: usize) {
         let Size {width, ..} = self.size;
@@ -234,6 +291,12 @@ impl View {
 
 
     // Fixup functions
+
+    fn scroll_text_location_into_view(&mut self) {
+        let Position{ row, col } = self.text_location_to_position();
+        self.scroll_vertically(row);
+        self.scroll_horizontally(col);
+    }
 
     fn snap_to_valid_grapheme(&mut self) {
         self.text_location.grapheme_index = self
