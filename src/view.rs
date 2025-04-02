@@ -1,7 +1,7 @@
 use crate::line::Line;
 use crate::terminal::{Size, Terminal, Position};
 use crate::buffer::Buffer;
-use crate::editor_commands::{Command, Direction::{self, Up, Down, Left, Right, PageDown, PageUp, Home, End}};
+use crate::editor_commands::{Command, Direction::{self, Up, Down, Left, Right, PageDown, PageUp, Home, End, WordJumpLeft, WordJumpRight}};
 use std::cmp::min;
 
 const NAME: &str = env!("CARGO_PKG_NAME");
@@ -34,6 +34,9 @@ impl Default for View {
 }
 
 impl View {
+
+    // Rendering functions
+
     pub fn render(&mut self) {
         if !self.needs_redraw {
             return;
@@ -59,7 +62,15 @@ impl View {
         }
         self.needs_redraw = false;
     }
-    
+
+    fn render_line(at: usize, line_text: &str) {
+        let result = Terminal::print_row(at, line_text);
+        debug_assert!(result.is_ok(), "Failed to render line");
+    }
+
+
+    // Other important functions
+
     pub fn handle_command(&mut self, command: Command) {
         match command {
             Command::Resize(size) => self.resize(size),
@@ -68,75 +79,17 @@ impl View {
         }
     }
 
-    pub fn load(&mut self, file_name: &str) {
-        if let Ok(buffer) = Buffer::load(file_name) {
-            self.buffer = buffer;
-            self.needs_redraw = true;
-        }
-    }
-
-    fn move_text_location(&mut self, direction: &Direction) {
-        let Size { height, .. } = self.size;
-
-        match direction {
-            Up => self.move_up(1),
-            Down => self.move_down(1),
-            Left => self.move_left(),
-            Right => self.move_right(),
-            PageUp => self.move_up(height.saturating_sub(1)),
-            PageDown => self.move_down(height.saturating_sub(1)),
-            Home => self.move_to_beggining_of_line(),
-            End => self.move_to_end_of_line(),
-        }
-
-        self.scroll_text_location_into_view();
-    }
-
     fn resize(&mut self, to: Size) {
         self.size = to;
         self.scroll_text_location_into_view();
         self.needs_redraw = true;
     }
 
-    fn scroll_text_location_into_view(&mut self) {
-        let Position{ row, col } = self.text_location_to_position();
-        self.scroll_vertically(row);
-        self.scroll_horizontally(col);
-    }
-
-    fn scroll_horizontally(&mut self, to: usize) {
-        let Size {width, ..} = self.size;
-        let offset_changed = if to < self.scroll_offset.col {
-            self.scroll_offset.col = to;
-            true
-        } else if to >= self.scroll_offset.col.saturating_add(width) {
-            self.scroll_offset.col = to.saturating_sub(width).saturating_add(1);
-            true
-        } else {
-            false
-        };
-
-        self.needs_redraw = self.needs_redraw || offset_changed;
-    }
-
-    fn scroll_vertically(&mut self, to: usize) {
-        let Size{height, ..} = self.size;
-        let offset_changed = if to < self.scroll_offset.row {
-            self.scroll_offset.row = to;
-            true
-        } else if to >= self.scroll_offset.row.saturating_add(height) {
-            self.scroll_offset.row = to.saturating_sub(height).saturating_add(1);
-            true
-        } else {
-            false
-        };
-
-        self.needs_redraw = self.needs_redraw || offset_changed;
-    }
-
-    fn render_line(at: usize, line_text: &str) {
-        let result = Terminal::print_row(at, line_text);
-        debug_assert!(result.is_ok(), "Failed to render line");
+    pub fn load(&mut self, file_name: &str) {
+        if let Ok(buffer) = Buffer::load(file_name) {
+            self.buffer = buffer;
+            self.needs_redraw = true;
+        }
     }
 
     fn build_welcome_message(width: usize) -> String {
@@ -173,6 +126,9 @@ impl View {
     pub fn get_caret_position(&self) -> Position {
         self.text_location_to_position().saturating_sub(self.scroll_offset)
     }
+
+
+    // Movement functions 
 
     fn move_up(&mut self, step: usize) {
         self.text_location.line_index = self.text_location.line_index.saturating_sub(step);
@@ -217,6 +173,67 @@ impl View {
     fn move_to_beggining_of_line(&mut self) {
         self.text_location.grapheme_index = 0;
     }
+
+    fn move_text_location(&mut self, direction: &Direction) {
+        let Size { height, .. } = self.size;
+
+        match direction {
+            Up => self.move_up(1),
+            Down => self.move_down(1),
+            Left => self.move_left(),
+            Right => self.move_right(),
+            PageUp => self.move_up(height.saturating_sub(1)),
+            PageDown => self.move_down(height.saturating_sub(1)),
+            Home => self.move_to_beggining_of_line(),
+            End => self.move_to_end_of_line(),
+            WordJumpRight => {},
+            WordJumpLeft => {},
+        }
+
+        self.scroll_text_location_into_view();
+    }
+
+
+    // Scroll text
+    
+    fn scroll_text_location_into_view(&mut self) {
+        let Position{ row, col } = self.text_location_to_position();
+        self.scroll_vertically(row);
+        self.scroll_horizontally(col);
+    }
+
+    fn scroll_horizontally(&mut self, to: usize) {
+        let Size {width, ..} = self.size;
+        let offset_changed = if to < self.scroll_offset.col {
+            self.scroll_offset.col = to;
+            true
+        } else if to >= self.scroll_offset.col.saturating_add(width) {
+            self.scroll_offset.col = to.saturating_sub(width).saturating_add(1);
+            true
+        } else {
+            false
+        };
+
+        self.needs_redraw = self.needs_redraw || offset_changed;
+    }
+
+    fn scroll_vertically(&mut self, to: usize) {
+        let Size{height, ..} = self.size;
+        let offset_changed = if to < self.scroll_offset.row {
+            self.scroll_offset.row = to;
+            true
+        } else if to >= self.scroll_offset.row.saturating_add(height) {
+            self.scroll_offset.row = to.saturating_sub(height).saturating_add(1);
+            true
+        } else {
+            false
+        };
+
+        self.needs_redraw = self.needs_redraw || offset_changed;
+    }
+
+
+    // Fixup functions
 
     fn snap_to_valid_grapheme(&mut self) {
         self.text_location.grapheme_index = self

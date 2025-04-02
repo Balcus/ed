@@ -10,6 +10,8 @@ pub enum Direction {
     PageDown,
     Home,
     End,
+    WordJumpRight,
+    WordJumpLeft,
 }
 
 pub enum Command {
@@ -30,6 +32,12 @@ impl TryFrom<Event> for Command {
                         Char('q') if modifiers == KeyModifiers::CONTROL => {
                             return Ok(Self::Quit);
                         },
+                        KeyCode::Right if modifiers == KeyModifiers::CONTROL => {
+                            return Ok(Self::Move(Direction::WordJumpRight));
+                        }
+                        KeyCode::Left if modifiers == KeyModifiers::CONTROL => {
+                            return Ok(Self::Move(Direction::WordJumpLeft));
+                        }
                         KeyCode::Up => {
                             return Ok(Self::Move(Direction::Up));
                         }

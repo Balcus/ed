@@ -22,17 +22,18 @@ impl Line {
         let fragments = line_str
             .graphemes(true)
             .map(|grapheme| {
-                let width = grapheme.width();
-
-                let render_width = match width {
-                    0 | 1 => GraphemeWidth::Half,
-                    _ => GraphemeWidth::Full,
-                };
-
-                let replacement = match width {
-                    0 => Some('·'),
-                    _ => None,
-                };
+                let (render_width, replacement) = Self::replacement_character(grapheme)
+                    .map_or_else(
+                        || {
+                            let unicode_width = grapheme.width();
+                            let render_width = match unicode_width {
+                                0 | 1 => GraphemeWidth::Half,
+                                _ => GraphemeWidth::Full,
+                            };
+                            (render_width, None)
+                        },
+                        |replacement| ( GraphemeWidth::Half, Some(replacement)),
+                    );
 
                 Fragment {
                     grapheme: grapheme.to_string(),
@@ -43,6 +44,26 @@ impl Line {
             .collect();
         Self {
             fragments,
+        }
+    }
+
+    pub fn replacement_character(grapheme: &str) -> Option<char> {
+        let width = grapheme.width();
+        match grapheme {
+            "\t" => Some(' '),
+            " " => None,
+            _ if grapheme.trim().is_empty() => Some('␣'),
+            _ if width == 0 => {
+                let mut chars = grapheme.chars();
+                if let Some(ch) = chars.next() {
+                    if ch.is_control() && chars.next() == None {
+                        return Some('▯');
+                    }
+                }
+                Some('·')
+            },
+            _ => None
+
         }
     }
 
