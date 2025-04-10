@@ -18,6 +18,8 @@ pub enum Command {
     Move(Direction),
     Resize(Size),
     Insert(char),
+    Delete,
+    Backspace,
     Quit,
 }
 
@@ -42,6 +44,8 @@ impl TryFrom<Event> for Command {
                         (KeyCode::Home, _) => Ok(Self::Move(Direction::Home)),
                         (KeyCode::End, _) => Ok(Self::Move(Direction::End)),
                         (KeyCode::Char(c), KeyModifiers::NONE | KeyModifiers::SHIFT) => Ok(Self::Insert(c)),
+                        (KeyCode::Delete, _) => Ok(Self::Delete),
+                        (KeyCode::Backspace, _) => Ok(Self::Backspace),
                         _ => Err(format!("Key Code is not supported: {code:?}")),
                     }
                 },

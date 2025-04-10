@@ -141,4 +141,16 @@ impl Line {
 
         self.fragments = Self::str_to_fragments(&line_builder);
     }
+
+    pub fn delete(&mut self, grapheme_index: usize) {
+        let mut new_line = String::new();
+
+        for (index, fragment) in self.fragments.iter().enumerate() {
+            if index != grapheme_index {
+                new_line.push_str(&fragment.grapheme);
+            }
+        }
+
+        self.fragments = Self::str_to_fragments(&new_line);
+    }
 }
