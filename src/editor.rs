@@ -66,19 +66,11 @@ impl Editor {
         };
 
         if should_process {
-            match Command::try_from(event) {
-                Ok(command) => {
-                    if matches!(command, Command::Quit) {
-                        self.should_quit = true;
-                    } else {
-                        self.view.handle_command(command);
-                    }
-                }
-                Err(e) => {
-                    #[cfg(debug_assertions)]
-                    {
-                        panic!("Command recived could not be handled: {e}")
-                    }
+            if let Ok(command) = Command::try_from(event) {
+                if matches!(command, Command::Quit) {
+                    self.should_quit = true;
+                } else {
+                    self.view.handle_command(command);
                 }
             }
         }

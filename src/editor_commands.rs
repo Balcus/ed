@@ -1,5 +1,5 @@
 use crate::terminal::Size;
-use crossterm::event::{Event, KeyCode::{self, Char}, KeyModifiers, KeyEvent};
+use crossterm::event::{Event, KeyCode, KeyModifiers, KeyEvent};
 
 pub enum Direction {
     Up,
@@ -17,6 +17,7 @@ pub enum Direction {
 pub enum Command {
     Move(Direction),
     Resize(Size),
+    Insert(char),
     Quit,
 }
 
@@ -28,42 +29,21 @@ impl TryFrom<Event> for Command {
                 code, 
                 modifiers, 
                 ..}) => {
-                    match code {
-                        Char('q') if modifiers == KeyModifiers::CONTROL => {
-                            return Ok(Self::Quit);
-                        },
-                        KeyCode::Right if modifiers == KeyModifiers::CONTROL => {
-                            return Ok(Self::Move(Direction::WordJumpRight));
-                        }
-                        KeyCode::Left if modifiers == KeyModifiers::CONTROL => {
-                            return Ok(Self::Move(Direction::WordJumpLeft));
-                        }
-                        KeyCode::Up => {
-                            return Ok(Self::Move(Direction::Up));
-                        }
-                        KeyCode::Down => {
-                            return Ok(Self::Move(Direction::Down));
-                        }
-                        KeyCode::Left => {
-                            return Ok(Self::Move(Direction::Left));
-                        }
-                        KeyCode::Right => {
-                            return Ok(Self::Move(Direction::Right));
-                        }
-                        KeyCode::PageDown => {
-                            return Ok(Self::Move(Direction::PageDown));
-                        }
-                        KeyCode::PageUp => {
-                            return Ok(Self::Move(Direction::PageUp));
-                        }
-                        KeyCode::Home => {
-                            return Ok(Self::Move(Direction::Home));
-                        }
-                        KeyCode::End => {
-                            return Ok(Self::Move(Direction::End));
-                        }
-                        _ => return Err(format!("The given KeyCode is currently not supported. Recived input: {code:?}")),
-                    };
+                    match (code, modifiers) {
+                        (KeyCode::Char('q'), KeyModifiers::CONTROL) => Ok(Self::Quit),
+                        (KeyCode::Right, KeyModifiers::CONTROL) => Ok(Self::Move(Direction::WordJumpRight)),
+                        (KeyCode::Left, KeyModifiers::CONTROL) => Ok(Self::Move(Direction::WordJumpLeft)),
+                        (KeyCode::Up, _) => Ok(Self::Move(Direction::Up)),
+                        (KeyCode::Down, _) => Ok(Self::Move(Direction::Down)),
+                        (KeyCode::Left, _) => Ok(Self::Move(Direction::Left)),
+                        (KeyCode::Right, _) => Ok(Self::Move(Direction::Right)),
+                        (KeyCode::PageDown, _) => Ok(Self::Move(Direction::PageDown)),
+                        (KeyCode::PageUp, _) => Ok(Self::Move(Direction::PageUp)),
+                        (KeyCode::Home, _) => Ok(Self::Move(Direction::Home)),
+                        (KeyCode::End, _) => Ok(Self::Move(Direction::End)),
+                        (KeyCode::Char(c), KeyModifiers::NONE | KeyModifiers::SHIFT) => Ok(Self::Insert(c)),
+                        _ => Err(format!("Key Code is not supported: {code:?}")),
+                    }
                 },
                 Event::Resize(width_u16, height_u16) => {
                     let width = width_u16 as usize;

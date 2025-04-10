@@ -53,7 +53,7 @@ impl View {
             if let Some(line) = self.buffer.lines.get(current_row.saturating_add(top)) {
                 let left = self.scroll_offset.col;
                 let right = self.scroll_offset.col.saturating_add(width);
-                Self::render_line(current_row, &line.get(left..right));
+                Self::render_line(current_row, &line.get_substr(left..right));
             } else if current_row == vertical_center && self.buffer.is_empty() {
                 Self::render_line(current_row, &Self::build_welcome_message(width));
             } else {
@@ -75,7 +75,8 @@ impl View {
         match command {
             Command::Resize(size) => self.resize(size),
             Command::Move(direction) => self.move_text_location(&direction),
-            Command::Quit => {}
+            Command::Insert(c) => self.insert_character(c),
+            Command::Quit => {},
         }
     }
 
@@ -127,6 +128,34 @@ impl View {
         self.text_location_to_position().saturating_sub(self.scroll_offset)
     }
 
+
+    // Inserting functions
+
+    fn insert_character(&mut self, c: char) {
+        let old_grapheme_len = self
+            .buffer
+            .lines
+            .get(self.text_location.line_index)
+            .map_or(0, Line::grapheme_count);
+
+        self.buffer.insert_char(c, &self.text_location);
+
+        let new_grapheme_len = self
+            .buffer
+            .lines
+            .get(self.text_location.line_index)
+            .map_or(0, Line::grapheme_count);
+        
+        let grapheme_difference = new_grapheme_len.saturating_sub(old_grapheme_len);
+
+        if grapheme_difference > 0 {
+            self.move_right();
+        }
+
+        self.needs_redraw = true;
+
+    }
+    
 
     // Movement functions 
 
@@ -194,7 +223,8 @@ impl View {
     }
 
     /*
-        Jump word functions will move the caret FROM inside a word TO the first space met (either to the left or right).
+        Jump word functions will move the caret FROM inside a word TO the beggining of the next word (for right navigation)
+        and to the last letter of the word before (for left navigation).
         They do not take into consideration any other separator such as: ',' , '.' , ':' , ... 
     */ 
     fn jump_word_right(&mut self) {
@@ -215,6 +245,7 @@ impl View {
                         fragment.replacement == Some(' ');
 
                     if is_white_space {
+                        curr_index = curr_index.saturating_add(1);
                         break;
                     }
                     
@@ -231,8 +262,9 @@ impl View {
         if let Some(buffer_line) = self.buffer.lines.get(self.text_location.line_index) {
 
             if self.text_location.grapheme_index <= 0 {
-                self.move_to_beggining_of_line();
                 self.move_up(1);
+                self.move_to_end_of_line();
+                
                 return;
             }
 
@@ -244,6 +276,7 @@ impl View {
                         fragment.replacement == Some(' ');
 
                     if is_white_space {
+                        curr_index = curr_index.saturating_sub(1);
                         break;
                     }
                     
@@ -271,7 +304,9 @@ impl View {
             false
         };
 
-        self.needs_redraw = self.needs_redraw || offset_changed;
+        if offset_changed {
+            self.needs_redraw = true;
+        }
     }
 
     fn scroll_vertically(&mut self, to: usize) {
@@ -286,7 +321,9 @@ impl View {
             false
         };
 
-        self.needs_redraw = self.needs_redraw || offset_changed;
+        if offset_changed {
+            self.needs_redraw = true;
+        }
     }
 
 
@@ -311,5 +348,4 @@ impl View {
     fn snap_to_valid_line(&mut self) {
         self.text_location.line_index = min(self.text_location.line_index, self.buffer.number_of_lines())
     }
-
 }
