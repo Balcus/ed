@@ -1,3 +1,4 @@
+use core::fmt;
 use std::ops::Range;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
@@ -15,6 +16,17 @@ pub struct Fragment {
 
 pub struct Line {
     fragments: Vec<Fragment>,
+}
+
+impl fmt::Display for Line {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
+        let result: String = self
+            .fragments
+            .iter()
+            .map(|fragment| fragment.grapheme.clone())
+            .collect();
+        write!(f, "{result}")
+    }
 }
 
 impl Line {
@@ -152,5 +164,12 @@ impl Line {
         }
 
         self.fragments = Self::str_to_fragments(&new_line);
+    }
+
+    pub fn append(&mut self, other: &Self) {
+        let mut concat = self.to_string();
+        concat.push_str(&other.to_string());
+        self.fragments = Self::str_to_fragments(&concat);
+
     }
 }

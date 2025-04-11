@@ -151,14 +151,17 @@ impl View {
         let grapheme_difference = new_grapheme_len.saturating_sub(old_grapheme_len);
 
         if grapheme_difference > 0 {
-            self.move_right();
+            self.move_text_location(&Direction::Right);
         }
 
         self.needs_redraw = true;
     }
 
     fn backspace(&mut self) {
-        self.move_left();
+        if self.text_location.grapheme_index == 0 && self.text_location.line_index == 0 {
+            return;
+        }
+        self.move_text_location(&Direction::Left);
         self.delete();
     }
 
