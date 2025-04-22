@@ -55,10 +55,10 @@ impl Buffer {
     }
 
     #[allow(dead_code)]
-    pub fn delete_line(&mut self, at: &Location) -> Line {
-        let line = self.lines[at.line_index].clone();
-        self.lines.remove(at.line_index);
-        line
+    pub fn delete_line(&mut self, at: usize) {
+        if self.number_of_lines() > at {
+            self.lines.remove(at);
+        }
     }
     
     pub fn insert_newline(&mut self, at: &Location) {

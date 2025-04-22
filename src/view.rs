@@ -79,6 +79,7 @@ impl View {
             Command::Backspace => self.backspace(),
             Command::Delete => self.delete(),
             Command::Enter => self.insert_newline(),
+            Command::RemoveLine => self.delete_line(),
             Command::Quit => {},
         }
     }
@@ -176,6 +177,11 @@ impl View {
 
     fn delete(&mut self) {
         self.buffer.delete(&self.text_location);
+        self.needs_redraw = true;
+    }
+
+    fn delete_line(&mut self) {
+        self.buffer.delete_line(self.text_location.line_index);
         self.needs_redraw = true;
     }
     
