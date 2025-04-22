@@ -3,17 +3,20 @@ use std::ops::Range;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
+#[derive(Clone)]
 enum GraphemeWidth {
     Half,
     Full,
 }
 
+#[derive(Clone)]
 pub struct Fragment {
     pub grapheme: String,
     render_width: GraphemeWidth,
     pub replacement: Option<char>,
 }
 
+#[derive(Clone, Default)]
 pub struct Line {
     fragments: Vec<Fragment>,
 }
@@ -171,5 +174,15 @@ impl Line {
         concat.push_str(&other.to_string());
         self.fragments = Self::str_to_fragments(&concat);
 
+    }
+
+    pub fn split(&mut self, at: usize) -> Self {
+        if at > self.fragments.len() {
+            return Self::default();
+        }
+        let next = self.fragments.split_off(at);
+        Self {
+            fragments: next,
+        }
     }
 }

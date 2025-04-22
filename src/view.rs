@@ -78,6 +78,7 @@ impl View {
             Command::Insert(c) => self.insert_character(c),
             Command::Backspace => self.backspace(),
             Command::Delete => self.delete(),
+            Command::Enter => self.insert_newline(),
             Command::Quit => {},
         }
     }
@@ -131,7 +132,7 @@ impl View {
     }
 
 
-    // Functions for writing text
+    // Write text
 
     fn insert_character(&mut self, c: char) {
         let old_grapheme_len = self
@@ -156,6 +157,14 @@ impl View {
 
         self.needs_redraw = true;
     }
+
+    fn insert_newline(&mut self) {
+        self.buffer.insert_newline(&self.text_location);
+        self.move_text_location(&Direction::Right);
+        self.needs_redraw = true;
+    }
+
+    // Delete text
 
     fn backspace(&mut self) {
         if self.text_location.grapheme_index == 0 && self.text_location.line_index == 0 {
@@ -339,7 +348,6 @@ impl View {
             self.needs_redraw = true;
         }
     }
-
 
     // Fixup functions
 

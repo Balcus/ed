@@ -19,6 +19,7 @@ pub enum Command {
     Resize(Size),
     Insert(char),
     Delete,
+    Enter,
     Backspace,
     Quit,
 }
@@ -46,6 +47,8 @@ impl TryFrom<Event> for Command {
                         (KeyCode::Char(c), KeyModifiers::NONE | KeyModifiers::SHIFT) => Ok(Self::Insert(c)),
                         (KeyCode::Delete, _) => Ok(Self::Delete),
                         (KeyCode::Backspace, _) => Ok(Self::Backspace),
+                        (KeyCode::Tab, _) => Ok(Self::Insert('\t')),
+                        (KeyCode::Enter, _) => Ok(Self::Enter),
                         _ => Err(format!("Key Code is not supported: {code:?}")),
                     }
                 },
