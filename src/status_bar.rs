@@ -22,14 +22,28 @@ impl StatusBar {
     }
 
     pub fn resize(&mut self, size: Size) {
-        todo!()
+        self.width = size.width;
+        self.position_y = size.height.saturating_sub(self.margin_bottom).saturating_sub(1);
+        self.needs_redraw = true;
     }
 
     pub fn update_status(&mut self, new_status: DocumentStatus) {
-        todo!()
+        if self.status != new_status {
+            self.status = new_status;
+            self.needs_redraw = true;
+        }
+
     }
 
     pub fn render(&mut self) {
-        todo!()
+        if !self.needs_redraw {
+            return;
+        }
+
+        let mut status = format!("{:?}", self.status);
+        status.truncate(self.width);
+        let res = Terminal::print_row(self.position_y, &status);
+        debug_assert!(res.is_ok(), "Error at rendering the status bar");
+        self.needs_redraw = true;
     }
 }

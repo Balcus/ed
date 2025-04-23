@@ -12,12 +12,12 @@ pub struct Editor {
     status_bar: StatusBar,
 }
 
-#[derive(Default)]
+#[derive(Default, PartialEq, Eq, Debug)]
 pub struct DocumentStatus {
-    file_name: Option<String>,
-    numer_of_lines: usize,
-    line_number: usize,
-    modified: bool,
+    pub file_name: Option<String>,
+    pub number_of_lines: usize,
+    pub line_number: usize,
+    pub modified: bool,
 }
 
 impl Editor {
@@ -57,12 +57,15 @@ impl Editor {
                     }
                 }
             }
+            let status = self.view.get_status();
+            self.status_bar.update_status(status);
         }
     }
 
     fn refresh_screen(&mut self) {
         let _ = Terminal::hide_caret();
         self.view.render(); 
+        self.status_bar.render();
         let _ = Terminal::move_caret(self.view.get_caret_position());
         let _ = Terminal::show_caret();
         let _ = Terminal::execute();
@@ -80,7 +83,10 @@ impl Editor {
                 if matches!(command, Command::Quit) {
                     self.should_quit = true;
                 } else {
-                    self.view.handle_command(command);
+                    self.view.handle_command(&command);
+                    if let Command::Resize(size) = command {
+                        self.status_bar.resize(size);
+                    }
                 }
             }
         }

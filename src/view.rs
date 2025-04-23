@@ -74,11 +74,11 @@ impl View {
 
     // Other important functions
 
-    pub fn handle_command(&mut self, command: Command) {
+    pub fn handle_command(&mut self, command: &Command) {
         match command {
-            Command::Resize(size) => self.resize(size),
+            Command::Resize(size) => self.resize(*size),
             Command::Move(direction) => self.move_text_location(&direction),
-            Command::Insert(c) => self.insert_character(c),
+            Command::Insert(c) => self.insert_character(*c),
             Command::Backspace => self.backspace(),
             Command::Delete => self.delete(),
             Command::Enter => self.insert_newline(),
@@ -140,11 +140,14 @@ impl View {
         let _ = self.buffer.save();
     }
 
-    // pub fn get_status(&self) -> DocumentStatus {
-    //     DocumentStatus {
-            
-    //     }
-    // }
+    pub fn get_status(&self) -> DocumentStatus {
+        DocumentStatus {
+            file_name: self.buffer.file_name.clone(),
+            number_of_lines: self.buffer.number_of_lines(),
+            line_number: self.text_location.line_index,
+            modified: self.buffer.dirty,
+        }
+    }
 
 
     // Write text
@@ -196,6 +199,7 @@ impl View {
 
     fn delete_line(&mut self) {
         self.buffer.delete_line(self.text_location.line_index);
+        self.move_up(1);
         self.needs_redraw = true;
     }
     
