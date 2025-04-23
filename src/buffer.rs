@@ -1,8 +1,12 @@
+use std::fs::File;
+use std::io::Write;
 use std::{char, fs::read_to_string, io::Error};
 use crate::line::Line;
 use crate::view::Location;
+
 #[derive(Default)]
 pub struct Buffer {
+    pub file_name: Option<String>,
     pub lines: Vec<Line>
 }
 
@@ -11,8 +15,8 @@ impl Buffer {
         self.lines.is_empty()
     }
 
-    pub fn load(filename: &str) -> Result<Self, Error> {
-        let file_content = read_to_string(filename)?;
+    pub fn load(file_name: &str) -> Result<Self, Error> {
+        let file_content = read_to_string(file_name)?;
         let mut lines = Vec::new();
         for line in file_content.lines() {
             lines.push(Line::from(line));
@@ -20,7 +24,18 @@ impl Buffer {
         
         Ok(Self {
             lines,
+            file_name: Some(file_name.to_string()),
         })
+    }
+
+    pub fn save(&self) -> Result<(), Error> {
+        if let Some(name) = &self.file_name {
+            let mut file = File::create(name)?;
+            for line in &self.lines {
+                writeln!(file, "{line}")?;
+            }
+        }
+        Ok(())
     }
 
     pub fn number_of_lines(&self) -> usize {

@@ -80,6 +80,7 @@ impl View {
             Command::Delete => self.delete(),
             Command::Enter => self.insert_newline(),
             Command::RemoveLine => self.delete_line(),
+            Command::Save => self.save_file(),
             Command::Quit => {},
         }
     }
@@ -130,6 +131,10 @@ impl View {
 
     pub fn get_caret_position(&self) -> Position {
         self.text_location_to_position().saturating_sub(self.scroll_offset)
+    }
+
+    fn save_file(&self) {
+        let _ = self.buffer.save();
     }
 
 
