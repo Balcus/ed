@@ -1,5 +1,6 @@
+use crate::editor::DocumentStatus;
 use crate::line::Line;
-use crate::terminal::{Size, Terminal, Position};
+use crate::terminal::{Position, Size, Terminal};
 use crate::buffer::Buffer;
 use crate::editor_commands::{Command, Direction::{self, Up, Down, Left, Right, PageDown, PageUp, Home, End, WordJumpLeft, WordJumpRight}};
 use std::cmp::min;
@@ -21,19 +22,21 @@ pub struct View {
     scroll_offset: Position,
 }
 
-impl Default for View {
-    fn default() -> Self {
+impl View {
+
+    pub fn new(margin_bottom: usize) -> Self {
+        let terminal_size = Terminal::size().unwrap_or_default();
         Self {
             buffer: Buffer::default(),
             needs_redraw: true,
-            size: Terminal::size().unwrap_or_default(),
+            size: Size {
+                height: terminal_size.height.saturating_sub(margin_bottom),
+                width: terminal_size.width,
+            },
             text_location: Location::default(),
             scroll_offset: Position::default(),
         }
     }
-}
-
-impl View {
 
     // Rendering functions
 
@@ -133,9 +136,15 @@ impl View {
         self.text_location_to_position().saturating_sub(self.scroll_offset)
     }
 
-    fn save_file(&self) {
+    fn save_file(&mut self) {
         let _ = self.buffer.save();
     }
+
+    // pub fn get_status(&self) -> DocumentStatus {
+    //     DocumentStatus {
+            
+    //     }
+    // }
 
 
     // Write text

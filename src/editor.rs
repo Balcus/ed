@@ -1,3 +1,4 @@
+use crate::status_bar::StatusBar;
 use crate::terminal::Terminal;
 use crate::view::View;
 use crossterm::event::KeyEventKind;
@@ -8,10 +9,18 @@ use crate::editor_commands::Command;
 pub struct Editor {
     should_quit: bool,
     view: View,
+    status_bar: StatusBar,
+}
+
+#[derive(Default)]
+pub struct DocumentStatus {
+    file_name: Option<String>,
+    numer_of_lines: usize,
+    line_number: usize,
+    modified: bool,
 }
 
 impl Editor {
-
     pub fn new() -> Result<Self, Error> {
         let current_hook = std::panic::take_hook();
         std::panic::set_hook(Box::new(move |panic_info| {
@@ -20,14 +29,15 @@ impl Editor {
         }));
         
         Terminal::init()?;
-        let mut view = View::default();
+        let mut view = View::new(2);
         let args: Vec<String> = env::args().collect();
         if let Some(filename) = args.get(1) {
             view.load(filename);
         }
-        Ok(Editor {
+        Ok(Self {
             should_quit: false,
-            view
+            view,
+            status_bar: StatusBar::new(1),
         })
     }
 

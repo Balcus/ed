@@ -6,6 +6,7 @@ mod buffer;
 mod editor_commands;
 mod line;
 use editor::Editor;
+mod status_bar;
 
 fn main() {
     let mut ed = Editor::new().unwrap();
