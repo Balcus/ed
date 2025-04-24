@@ -5,19 +5,13 @@ use crossterm::event::KeyEventKind;
 use crossterm::event::{read, Event, KeyEvent};
 use std::{env, io::Error};
 use crate::editor_commands::Command;
+use crate::view::NAME;
 
 pub struct Editor {
     should_quit: bool,
     view: View,
     status_bar: StatusBar,
-}
-
-#[derive(Default, PartialEq, Eq, Debug)]
-pub struct DocumentStatus {
-    pub file_name: Option<String>,
-    pub number_of_lines: usize,
-    pub line_number: usize,
-    pub modified: bool,
+    title: String,
 }
 
 impl Editor {
@@ -29,20 +23,38 @@ impl Editor {
         }));
         
         Terminal::init()?;
-        let mut view = View::new(2);
-        let args: Vec<String> = env::args().collect();
-        if let Some(filename) = args.get(1) {
-            view.load(filename);
-        }
-        Ok(Self {
+        
+        let mut editor = Self {
             should_quit: false,
-            view,
+            view: View::new(2),
             status_bar: StatusBar::new(1),
-        })
+            title: String::new(),
+        };
+
+        let args: Vec<String> = env::args().collect();
+
+        if let Some(filename) = args.get(1) {
+            editor.view.load(filename);
+        }
+
+        editor.refresh_status();
+        Ok(editor)
+    }
+
+    pub fn refresh_status(&mut self) {
+        let status = self.view.get_status();
+        let title = format!("{} - {NAME}", status.file_name);
+        self.status_bar.update_status(status);
+
+        if title != self.title && matches!(Terminal::set_title(&title), Ok(())) {
+            self.title = title;
+        }
     }
 
     pub fn run(&mut self) {
         loop {
+            let status = self.view.get_status();
+            self.status_bar.update_status(status);
             self.refresh_screen();
 
             if self.should_quit {
@@ -57,8 +69,6 @@ impl Editor {
                     }
                 }
             }
-            let status = self.view.get_status();
-            self.status_bar.update_status(status);
         }
     }
 

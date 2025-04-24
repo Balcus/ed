@@ -3,10 +3,11 @@ use std::io::Write;
 use std::{char, fs::read_to_string, io::Error};
 use crate::line::Line;
 use crate::view::Location;
+use crate::file_info::FileInfo;
 
 #[derive(Default)]
 pub struct Buffer {
-    pub file_name: Option<String>,
+    pub file_info: FileInfo,
     pub lines: Vec<Line>,
     pub dirty: bool
 }
@@ -25,16 +26,16 @@ impl Buffer {
         
         Ok(Self {
             lines,
-            file_name: Some(file_name.to_string()),
+            file_info: FileInfo::from(file_name),
             dirty: true,
         })
     }
 
     pub fn save(&mut self) -> Result<(), Error> {
-        if let Some(name) = &self.file_name {
-            let mut file = File::create(name)?;
+        if let Some(name) = &self.file_info.path {
+            let mut path = File::create(name)?;
             for line in &self.lines {
-                writeln!(file, "{line}")?;
+                writeln!(path, "{line}")?;
             }
             self.dirty = false;
         }

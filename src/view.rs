@@ -1,11 +1,11 @@
-use crate::editor::DocumentStatus;
+use crate::document_status::DocumentStatus;
 use crate::line::Line;
 use crate::terminal::{Position, Size, Terminal};
 use crate::buffer::Buffer;
 use crate::editor_commands::{Command, Direction::{self, Up, Down, Left, Right, PageDown, PageUp, Home, End, WordJumpLeft, WordJumpRight}};
 use std::cmp::min;
 
-const NAME: &str = env!("CARGO_PKG_NAME");
+pub const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION"); 
 
 #[derive(Default)]
@@ -20,6 +20,7 @@ pub struct View {
     size: Size,
     text_location: Location,
     scroll_offset: Position,
+    bottom_margin: usize,
 }
 
 impl View {
@@ -35,6 +36,7 @@ impl View {
             },
             text_location: Location::default(),
             scroll_offset: Position::default(),
+            bottom_margin: margin_bottom,
         }
     }
 
@@ -89,7 +91,10 @@ impl View {
     }
 
     fn resize(&mut self, to: Size) {
-        self.size = to;
+        self.size = Size {
+            height: to.height.saturating_sub(self.bottom_margin),
+            width: to.width,
+        };
         self.scroll_text_location_into_view();
         self.needs_redraw = true;
     }
@@ -103,21 +108,18 @@ impl View {
 
     fn build_welcome_message(width: usize) -> String {
         if width == 0 {
-            return " ".to_string();
+            return String::new();
         }
         let welcome_message = format!("{NAME} editor -- version {VERSION}");
         let len = welcome_message.len();
-        if width <= len {
+        
+        let remainign_width = width.saturating_sub(1);
+
+        if remainign_width < len {
             return "~".to_string();
         }
-
-
-        #[allow(clippy::integer_division)]
-        let padding = (width.saturating_sub(len).saturating_sub(1)) / 2;
-
-        let mut full_message = format!("~{}{}", " ".repeat(padding), welcome_message);
-        full_message.truncate(width);
-        full_message
+        
+        format!("{:<1}{:^remainign_width$}", "~", welcome_message)
     }
 
     fn text_location_to_position(&self) -> Position {
@@ -142,7 +144,7 @@ impl View {
 
     pub fn get_status(&self) -> DocumentStatus {
         DocumentStatus {
-            file_name: self.buffer.file_name.clone(),
+            file_name: format!("{}", self.buffer.file_info),
             number_of_lines: self.buffer.number_of_lines(),
             line_number: self.text_location.line_index,
             modified: self.buffer.dirty,
