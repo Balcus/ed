@@ -3,7 +3,7 @@ use crate::terminal::Terminal;
 use crate::view::View;
 use crossterm::event::KeyEventKind;
 use crossterm::event::{read, Event, KeyEvent};
-use std::{env, io::Error};
+use std::io::Error;
 use crate::editor_commands::Command;
 use crate::view::NAME;
 
@@ -22,8 +22,6 @@ impl Editor {
             current_hook(panic_info);
         }));
         
-        Terminal::init()?;
-        
         let mut editor = Self {
             should_quit: false,
             view: View::new(2),
@@ -31,14 +29,13 @@ impl Editor {
             title: String::new(),
         };
 
-        let args: Vec<String> = env::args().collect();
-
-        if let Some(filename) = args.get(1) {
-            editor.view.load(filename);
-        }
-
         editor.refresh_status();
         Ok(editor)
+    }
+
+    pub fn init(&self) -> Result<(), Error> {
+        Terminal::init()?;
+        Ok(())
     }
 
     pub fn refresh_status(&mut self) {
@@ -100,6 +97,10 @@ impl Editor {
                 }
             }
         }
+    }
+    
+    pub(crate) fn load(&mut self, file_name: &str) {
+        self.view.load(file_name);
     }
 }
 
