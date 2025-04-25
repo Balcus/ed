@@ -204,7 +204,6 @@ impl View {
         self.move_up(1);
         self.needs_redraw = true;
     }
-    
 
     // Movement functions 
 
@@ -271,11 +270,6 @@ impl View {
         self.text_location.grapheme_index = 0;
     }
 
-    /*
-        Jump word functions will move the caret FROM inside a word TO the beggining of the next word (for right navigation)
-        and to the last letter of the word before (for left navigation).
-        They do not take into consideration any other separator such as: ',' , '.' , ':' , ... 
-    */ 
     fn jump_word_right(&mut self) {
         if let Some(buffer_line) = self.buffer.lines.get(self.text_location.line_index) {
             let grapheme_count = buffer_line.grapheme_count();
@@ -287,45 +281,72 @@ impl View {
             }
 
             let mut curr_index = self.text_location.grapheme_index;
+
             while curr_index < grapheme_count {
                 if let Some(fragment) = buffer_line.get_fragments().get(curr_index) {
-                    let is_white_space = fragment.grapheme.trim().is_empty() || 
-                        fragment.replacement == Some('␣') ||
-                        fragment.replacement == Some(' ');
-
+                    let is_white_space = fragment.grapheme.trim().is_empty() ||
+                        fragment.replacement == Some(' ') ||
+                        fragment.replacement == Some('␣');
+                
                     if is_white_space {
-                        curr_index = curr_index.saturating_add(1);
                         break;
                     }
-                    
+
                     curr_index = curr_index.saturating_add(1);
                 } else {
                     break;
                 }
             }
+
+            while curr_index < grapheme_count {
+                if let Some(fragment) = buffer_line.get_fragments().get(curr_index) {
+                    let is_white_space = fragment.grapheme.trim().is_empty() ||
+                        fragment.replacement == Some(' ') ||
+                        fragment.replacement == Some('␣');
+                
+                    if !is_white_space {
+                        break;
+                    }
+
+                    curr_index = curr_index.saturating_add(1);
+                }else {
+                    break;
+                }
+            }
+
+            if curr_index >= grapheme_count {
+                self.move_to_beggining_of_line();
+                self.move_down(1);
+                return;
+            }
+
             self.text_location.grapheme_index = curr_index;
         }
     }
 
     fn jump_word_left(&mut self) {
-        if let Some(buffer_line) = self.buffer.lines.get(self.text_location.line_index) {
+        if self.text_location.line_index == 0 && self.text_location.grapheme_index == 0 {
+            return;
+        }
 
+        if let Some(buffer_line) = self.buffer.lines.get(self.text_location.line_index) {
             if self.text_location.grapheme_index <= 0 {
                 self.move_up(1);
                 self.move_to_end_of_line();
-                
                 return;
             }
-
+    
             let mut curr_index = self.text_location.grapheme_index;
+            
+            curr_index = curr_index.saturating_sub(1);
+            
             while curr_index > 0 {
                 if let Some(fragment) = buffer_line.get_fragments().get(curr_index) {
-                    let is_white_space = fragment.grapheme.trim().is_empty() || 
-                        fragment.replacement == Some('␣') ||
-                        fragment.replacement == Some(' ');
-
-                    if is_white_space {
-                        curr_index = curr_index.saturating_sub(1);
+                    let is_white_space = fragment.grapheme.trim().is_empty() ||
+                        fragment.replacement == Some(' ') ||
+                        fragment.replacement == Some('␣');
+                    
+                    if !is_white_space {
                         break;
                     }
                     
@@ -334,6 +355,32 @@ impl View {
                     break;
                 }
             }
+            
+            while curr_index > 0 {
+                let prev_index = curr_index.saturating_sub(1);
+                if let Some(fragment) = buffer_line.get_fragments().get(prev_index) {
+                    let is_white_space = fragment.grapheme.trim().is_empty() ||
+                        fragment.replacement == Some(' ') ||
+                        fragment.replacement == Some('␣');
+                    
+                    if is_white_space {
+                        break;
+                    }
+                    
+                    curr_index = prev_index;
+                } else {
+                    break;
+                }
+            }
+            
+            if curr_index <= 0 {
+                if self.text_location.line_index > 0 {
+                    self.move_up(1);
+                    self.move_to_end_of_line();
+                    return;
+                }
+            }
+            
             self.text_location.grapheme_index = curr_index;
         }
     }
