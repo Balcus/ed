@@ -10,7 +10,8 @@ mod status_bar;
 mod document_status;
 mod file_info;
 mod args;
-
+mod ui_component;
+mod message_bar;
 fn main() {
     let mut ed = Editor::new().unwrap();
     if let Some(file_name) = args::parse_args() {
@@ -19,3 +20,4 @@ fn main() {
     ed.init().unwrap();
     ed.run();
 }
+
