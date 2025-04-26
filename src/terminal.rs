@@ -114,7 +114,6 @@ impl Terminal {
         Ok(Size { height, width })
     }
 
-    // prints the output buffer
     pub fn execute() -> Result<(), Error> {
         stdout().flush()?;
         Ok(())
@@ -152,5 +151,4 @@ impl Terminal {
         Self::queue_command(DisableLineWrap)?;
         Ok(())
     }
-    
 }

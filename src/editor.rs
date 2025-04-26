@@ -31,11 +31,11 @@ impl Editor {
         let size = Terminal::size().unwrap_or_default();
         editor.resize(size);
         editor.refresh_status();
-        editor.message_bar.change_message(String::from("HELP: Ctrl-S = save | Ctrl-Q = quit"));
+        editor.message_bar.update_message(String::from("HELP: ^S - save | ^Q - quit | ^L - line numbers"));
         Ok(editor)
     }
 
-    pub fn init(&self) -> Result<(), Error> {
+    pub fn init(&mut self) -> Result<(), Error> {
         Terminal::init()?;
         Ok(())
     }

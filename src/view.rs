@@ -5,7 +5,7 @@ use crate::buffer::Buffer;
 use crate::editor_commands::{Command, Direction::{self, Up, Down, Left, Right, PageDown, PageUp, Home, End, WordJumpLeft, WordJumpRight}};
 use crate::ui_component::UiComponent;
 use std::cmp::min;
-use std::io::Error;
+// use std::io::Error;
 
 pub const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION"); 
@@ -23,6 +23,7 @@ pub struct View {
     size: Size,
     text_location: Location,
     scroll_offset: Position,
+    show_line_numbers: bool,
 }
 
 impl UiComponent for View {
@@ -42,26 +43,54 @@ impl UiComponent for View {
     fn draw(&mut self, position_y: usize) -> Result<(), std::io::Error> {
         let Size { height, width } = self.size;
         let end_y = position_y.saturating_add(height);
-
+        
         #[allow(clippy::integer_division)]
         let top_third = height / 3;
         let scroll_top = self.scroll_offset.row;
-
+        
+        let content_width = if self.show_line_numbers {
+            width.saturating_sub(6)
+        } else {
+            width
+        };
+        
         for current_row in position_y..end_y {
             let line_idx = current_row
                 .saturating_sub(position_y)
                 .saturating_add(scroll_top);
+                
+            Terminal::print_row(current_row, &" ".repeat(width))?;
+            
+            if self.show_line_numbers {
+                let line_number = if line_idx < self.buffer.number_of_lines() {
+                    format!("{:4}  ", line_idx + 1)
+                } else {
+                    "     ".to_string()
+                };
+                
+                Terminal::move_caret(Position::new(current_row, 0))?;
+                Terminal::print(&line_number)?;
+            }
+            
+            let content_start = if self.show_line_numbers { 6 } else { 0 };
+            
             if let Some(line) = self.buffer.lines.get(line_idx) {
                 let left = self.scroll_offset.col;
-                let right = self.scroll_offset.col.saturating_add(width);
-                Self::render_line(current_row, &&line.get_substr(left..right))?;
+                let right = self.scroll_offset.col.saturating_add(content_width);
+                let content = line.get_substr(left..right);
+                
+                Terminal::move_caret(Position::new(current_row, content_start))?;
+                Terminal::print(&content)?;
             } else if current_row == top_third && self.buffer.is_empty() {
-                Self::render_line(current_row, &Self::build_welcome_message(width))?;
+                let message = Self::build_welcome_message(content_width);
+                Terminal::move_caret(Position::new(current_row, content_start))?;
+                Terminal::print(&message)?;
             } else {
-                Self::render_line(current_row, "~")?;
+                Terminal::move_caret(Position::new(current_row, content_start))?;
+                Terminal::print("~")?;
             }
         }
-        Ok(())   
+        Ok(())
     }
 }
 
@@ -69,9 +98,9 @@ impl View {
 
     // render functions
 
-    fn render_line(at: usize, line_text: &str) -> Result<(), Error> {
-        Terminal::print_row(at, line_text)
-    }
+    // fn render_line(at: usize, line_text: &str) -> Result<(), Error> {
+    //     Terminal::print_row(at, line_text)
+    // }
 
 
     // Other important functions
@@ -86,6 +115,7 @@ impl View {
             Command::Enter => self.insert_newline(),
             Command::RemoveLine => self.delete_line(),
             Command::Save => self.save_file(),
+            Command::ShowLineNumbers => self.change_line_numbers(),
         }
     }
 
@@ -125,7 +155,11 @@ impl View {
     }
 
     pub fn get_caret_position(&self) -> Position {
-        self.text_location_to_position().saturating_sub(self.scroll_offset)
+        let mut position = self.text_location_to_position().saturating_sub(self.scroll_offset);
+        if self.show_line_numbers {
+            position.col = position.col.saturating_add(6);
+        }
+        position
     }
 
     fn save_file(&mut self) {
@@ -432,5 +466,11 @@ impl View {
 
     fn snap_to_valid_line(&mut self) {
         self.text_location.line_index = min(self.text_location.line_index, self.buffer.number_of_lines())
+    }
+    
+    fn change_line_numbers(&mut self) {
+        let show = self.show_line_numbers;
+        self.show_line_numbers = !show;
+        self.mark_redraw(true);
     }
 }
