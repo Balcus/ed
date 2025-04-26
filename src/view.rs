@@ -2,9 +2,10 @@ use crate::document_status::DocumentStatus;
 use crate::line::Line;
 use crate::terminal::{Position, Size, Terminal};
 use crate::buffer::Buffer;
-use crate::editor_commands::{Command, Direction::{self, Up, Down, Left, Right, PageDown, PageUp, Home, End, WordJumpLeft, WordJumpRight}};
+use crate::editor_commands::{Edit, Move};
 use crate::ui_component::UiComponent;
 use std::cmp::min;
+use std::io::Error;
 
 pub const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION"); 
@@ -97,24 +98,41 @@ impl View {
 
     // Important functions
 
-    pub fn handle_command(&mut self, command: &Command) {
+    pub fn handle_edit_command(&mut self, command: &Edit) {
         match command {
-            Command::Resize(_) | Command::Quit => {},
-            Command::Move(direction) => self.move_text_location(&direction),
-            Command::Insert(c) => self.insert_character(*c),
-            Command::Backspace => self.backspace(),
-            Command::Delete => self.delete(),
-            Command::Enter => self.insert_newline(),
-            Command::RemoveLine => self.delete_line(),
-            Command::Save => self.save_file(),
-            Command::ShowLineNumbers => self.change_line_numbers(),
+            Edit::Insert(c) => self.insert_character(*c),
+            Edit::Backspace => self.backspace(),
+            Edit::Delete => self.delete(),
+            Edit::Enter => self.insert_newline(),
+            Edit::RemoveLine => self.delete_line(),
         }
     }
 
-    pub fn load(&mut self, file_name: &str) {
-        if let Ok(buffer) = Buffer::load(file_name) {
-            self.buffer = buffer;
-            self.mark_redraw(true);
+    pub fn handle_move_command(&mut self, command: &Move) {
+        let Size { height, .. } = self.size;
+        match command {
+            Move::Up => self.move_up(1),
+            Move::Down => self.move_down(1),
+            Move::Left => self.move_left(),
+            Move::Right => self.move_right(),
+            Move::PageUp => self.move_up(height.saturating_sub(1)),
+            Move::PageDown => self.move_down(height.saturating_sub(1)),
+            Move::Home => self.move_to_beggining_of_line(),
+            Move::End => self.move_to_end_of_line(),
+            Move::WordJumpLeft => self.jump_word_left(),
+            Move::WordJumpRight => self.jump_word_right(),
+        }
+        self.scroll_text_location_into_view();
+    }
+
+    pub fn load(&mut self, file_name: &str) -> Result<(), Error> {
+        match Buffer::load(file_name) {
+            Ok(buffer) => {
+                self.buffer = buffer;
+                self.mark_redraw(true);
+                Ok(())
+            }
+            Err(error) => Err(error)
         }
     }
 
@@ -154,8 +172,8 @@ impl View {
         position
     }
 
-    fn save_file(&mut self) {
-        let _ = self.buffer.save();
+    pub fn save_file(&mut self) -> Result<(), Error>{
+        self.buffer.save()
     }
 
     pub fn get_status(&self) -> DocumentStatus {
@@ -188,7 +206,7 @@ impl View {
         let grapheme_difference = new_grapheme_len.saturating_sub(old_grapheme_len);
 
         if grapheme_difference > 0 {
-            self.move_text_location(&Direction::Right);
+            self.handle_move_command(&Move::Right);
         }
 
         self.mark_redraw(true);
@@ -196,7 +214,7 @@ impl View {
 
     fn insert_newline(&mut self) {
         self.buffer.insert_newline(&self.text_location);
-        self.move_text_location(&Direction::Right);
+        self.handle_move_command(&Move::Right);
         self.mark_redraw(true);
     }
 
@@ -206,7 +224,7 @@ impl View {
         if self.text_location.grapheme_index == 0 && self.text_location.line_index == 0 {
             return;
         }
-        self.move_text_location(&Direction::Left);
+        self.handle_move_command(&Move::Left);
         self.delete();
     }
 
@@ -222,25 +240,6 @@ impl View {
     }
 
     // Movement functions 
-
-    fn move_text_location(&mut self, direction: &Direction) {
-        let Size { height, .. } = self.size;
-
-        match direction {
-            Up => self.move_up(1),
-            Down => self.move_down(1),
-            Left => self.move_left(),
-            Right => self.move_right(),
-            PageUp => self.move_up(height.saturating_sub(1)),
-            PageDown => self.move_down(height.saturating_sub(1)),
-            Home => self.move_to_beggining_of_line(),
-            End => self.move_to_end_of_line(),
-            WordJumpRight => self.jump_word_right(),
-            WordJumpLeft => self.jump_word_left(),
-        }
-
-        self.scroll_text_location_into_view();
-    }
 
     fn move_up(&mut self, step: usize) {
         self.text_location.line_index = self.text_location.line_index.saturating_sub(step);
@@ -460,7 +459,7 @@ impl View {
         self.text_location.line_index = min(self.text_location.line_index, self.buffer.number_of_lines())
     }
     
-    fn change_line_numbers(&mut self) {
+    pub fn change_line_numbers(&mut self) {
         let show = self.show_line_numbers;
         self.show_line_numbers = !show;
         self.mark_redraw(true);

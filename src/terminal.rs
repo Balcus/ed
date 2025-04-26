@@ -10,15 +10,6 @@ pub struct Size {
     pub width: usize,
 }
 
-impl Size {
-    pub fn new(width: usize, height: usize) -> Self {
-        Size {
-            width,
-            height
-        }
-    }
-}
-
 #[derive(Copy, Clone, Default)]
 pub struct Position {
     pub row: usize,
