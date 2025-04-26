@@ -31,7 +31,7 @@ impl Editor {
         let size = Terminal::size().unwrap_or_default();
         editor.resize(size);
         editor.refresh_status();
-        editor.message_bar.update_message(String::from("HELP: ^S - save | ^Q - quit | ^L - line numbers"));
+        editor.message_bar.update_message(String::from("HELP: ^S - save | ^Q - quit | ^L - line"));
         Ok(editor)
     }
 

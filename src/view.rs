@@ -5,7 +5,6 @@ use crate::buffer::Buffer;
 use crate::editor_commands::{Command, Direction::{self, Up, Down, Left, Right, PageDown, PageUp, Home, End, WordJumpLeft, WordJumpRight}};
 use crate::ui_component::UiComponent;
 use std::cmp::min;
-// use std::io::Error;
 
 pub const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION"); 
@@ -96,14 +95,7 @@ impl UiComponent for View {
 
 impl View {
 
-    // render functions
-
-    // fn render_line(at: usize, line_text: &str) -> Result<(), Error> {
-    //     Terminal::print_row(at, line_text)
-    // }
-
-
-    // Other important functions
+    // Important functions
 
     pub fn handle_command(&mut self, command: &Command) {
         match command {
