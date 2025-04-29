@@ -185,4 +185,16 @@ impl Line {
             fragments: next,
         }
     }
+    
+    pub(crate) fn width(&self) -> usize {
+        self.sum_width_until(self.grapheme_count())
+    }
+    
+    pub(crate) fn append_character(&mut self, c: char) {
+        self.insert_char(c, self.grapheme_count());
+    }
+    
+    pub(crate) fn delete_last_character(&mut self) {
+        self.delete(self.grapheme_count().saturating_sub(1));
+    }
 }

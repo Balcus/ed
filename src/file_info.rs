@@ -14,6 +14,14 @@ impl FileInfo {
             path: Some(PathBuf::from(file_name)),
         }
     }
+
+    pub fn has_path(&self) -> bool {
+        self.path.is_some()
+    }
+    
+    pub(crate) fn get_path(&self) -> Option<PathBuf> {
+        self.path.clone()
+    }
 }
 
 impl Display for FileInfo {

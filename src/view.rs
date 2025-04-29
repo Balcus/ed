@@ -98,6 +98,10 @@ impl View {
 
     // Important functions
 
+    pub fn is_file_loaded(&self) -> bool {
+        self.buffer.file_info.has_path()
+    }
+
     pub fn handle_edit_command(&mut self, command: &Edit) {
         match command {
             Edit::Insert(c) => self.insert_character(*c),
@@ -170,10 +174,6 @@ impl View {
             position.col = position.col.saturating_add(6);
         }
         position
-    }
-
-    pub fn save_file(&mut self) -> Result<(), Error>{
-        self.buffer.save()
     }
 
     pub fn get_status(&self) -> DocumentStatus {
@@ -463,5 +463,13 @@ impl View {
         let show = self.show_line_numbers;
         self.show_line_numbers = !show;
         self.mark_redraw(true);
+    }
+    
+    pub(crate) fn save(&mut self) -> Result<(), Error> {
+        self.buffer.save()
+    }
+    
+    pub(crate) fn save_as(&mut self, file_name: &str ) -> Result<(), Error> {
+        self.buffer.save_as(file_name)
     }
 }

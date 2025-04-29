@@ -78,6 +78,7 @@ pub enum System {
     Quit,
     Resize(Size),
     ShowLineNumbers,
+    Dismiss,
 }
 
 
@@ -95,6 +96,7 @@ impl TryFrom<KeyEvent> for System {
             (KeyCode::Char('q'), KeyModifiers::CONTROL) => Ok(Self::Quit),
             (KeyCode::Char('s'), KeyModifiers::CONTROL) => Ok(Self::Save),
             (KeyCode::Char('l'), KeyModifiers::CONTROL) => Ok(Self::ShowLineNumbers),
+            (KeyCode::Esc, _) => Ok(Self::Dismiss),
             _ => Err(format!("Key Code is not supported: {code:?}")),
         }
     }

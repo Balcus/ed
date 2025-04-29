@@ -95,4 +95,22 @@ impl Buffer {
             self.dirty = true;
         }
     }
+    
+    pub(crate) fn save_as(&mut self, file_name: &str) -> Result<(), Error> {
+        let file_info = FileInfo::from(file_name);
+        self.save_to_file(&file_info)?;
+        self.file_info = file_info;
+        self.dirty = false;
+        Ok(())
+    }
+    
+    fn save_to_file(&self, file_info: &FileInfo) -> Result<(), Error> {
+        if let Some(file_path) = &file_info.get_path() {
+            let mut file = File::create(file_path)?;
+            for line in &self.lines {
+                writeln!(file, "{line}")?;
+            }
+        }
+        Ok(())
+    }
 }
