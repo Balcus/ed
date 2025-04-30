@@ -29,7 +29,7 @@ pub struct Editor {
 }
 
 impl Editor {
-    pub fn new() -> Result<Self, Error> {
+    pub fn new() -> Self {
         let current_hook = std::panic::take_hook();
         std::panic::set_hook(Box::new(move |panic_info| {
             let _ = Terminal::terminate();
@@ -41,10 +41,10 @@ impl Editor {
         editor.resize(size);
         editor.refresh_status();
         editor.message_bar.update_message("HELP: ^S - save | ^Q - quit | ^L - line");
-        Ok(editor)
+        editor
     }
 
-    pub fn init(&mut self) -> Result<(), Error> {
+    pub fn init() -> Result<(), Error> {
         Terminal::init()?;
         Ok(())
     }
@@ -67,7 +67,7 @@ impl Editor {
             command_bar.resize(Size {
                 height: 1,
                 width: size.width,
-            })
+            });
         }
     }
 
@@ -156,7 +156,7 @@ impl Editor {
     
     pub(crate) fn load(&mut self, file_name: &str) {
         if self.view.load(file_name).is_err() {
-            self.message_bar.update_message(&format!("ERROR: Failed to read file {}",file_name));
+            self.message_bar.update_message(&format!("ERROR: Failed to read file {file_name}"));
         }
     }
     
@@ -195,12 +195,12 @@ impl Editor {
                         command_bar.handle_edit_command(editor_command);
                     }
                 } else {
-                    self.view.handle_edit_command(&editor_command);
+                    self.view.handle_edit_command(editor_command);
                 }
             },
             Move(move_command)=>  {
                 if self.command_bar.is_none() {
-                    self.view.handle_move_command(&move_command);
+                    self.view.handle_move_command(move_command);
                 }
             },
         }

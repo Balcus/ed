@@ -28,7 +28,7 @@ pub struct View {
 
 impl UiComponent for View {
     fn mark_redraw(&mut self, val: bool) {
-        self.needs_redraw = val
+        self.needs_redraw = val;
     }
 
     fn needs_redraw(&self) -> bool {
@@ -98,13 +98,13 @@ impl View {
 
     // Important functions
 
-    pub fn is_file_loaded(&self) -> bool {
+    pub const fn is_file_loaded(&self) -> bool {
         self.buffer.file_info.has_path()
     }
 
-    pub fn handle_edit_command(&mut self, command: &Edit) {
+    pub fn handle_edit_command(&mut self, command: Edit) {
         match command {
-            Edit::Insert(c) => self.insert_character(*c),
+            Edit::Insert(c) => self.insert_character(c),
             Edit::Backspace => self.backspace(),
             Edit::Delete => self.delete(),
             Edit::Enter => self.insert_newline(),
@@ -112,7 +112,7 @@ impl View {
         }
     }
 
-    pub fn handle_move_command(&mut self, command: &Move) {
+    pub fn handle_move_command(&mut self, command: Move) {
         let Size { height, .. } = self.size;
         match command {
             Move::Up => self.move_up(1),
@@ -206,7 +206,7 @@ impl View {
         let grapheme_difference = new_grapheme_len.saturating_sub(old_grapheme_len);
 
         if grapheme_difference > 0 {
-            self.handle_move_command(&Move::Right);
+            self.handle_move_command(Move::Right);
         }
 
         self.mark_redraw(true);
@@ -214,7 +214,7 @@ impl View {
 
     fn insert_newline(&mut self) {
         self.buffer.insert_newline(&self.text_location);
-        self.handle_move_command(&Move::Right);
+        self.handle_move_command(Move::Right);
         self.mark_redraw(true);
     }
 
@@ -224,7 +224,7 @@ impl View {
         if self.text_location.grapheme_index == 0 && self.text_location.line_index == 0 {
             return;
         }
-        self.handle_move_command(&Move::Left);
+        self.handle_move_command(Move::Left);
         self.delete();
     }
 
@@ -254,7 +254,7 @@ impl View {
 
     fn move_left(&mut self) {
         if self.text_location.grapheme_index > 0 {
-            self.text_location.grapheme_index -= 1
+            self.text_location.grapheme_index -= 1;
         } else if self.text_location.line_index > 0 {
             self.move_up(1);
             self.move_to_end_of_line();
@@ -281,7 +281,7 @@ impl View {
             .map_or(0, Line::grapheme_count);
     }
 
-    fn move_to_beggining_of_line(&mut self) {
+    const fn move_to_beggining_of_line(&mut self) {
         self.text_location.grapheme_index = 0;
     }
 
@@ -345,7 +345,7 @@ impl View {
         }
 
         if let Some(buffer_line) = self.buffer.lines.get(self.text_location.line_index) {
-            if self.text_location.grapheme_index <= 0 {
+            if self.text_location.grapheme_index == 0 {
                 self.move_up(1);
                 self.move_to_end_of_line();
                 return;
@@ -388,12 +388,10 @@ impl View {
                 }
             }
             
-            if curr_index <= 0 {
-                if self.text_location.line_index > 0 {
-                    self.move_up(1);
-                    self.move_to_end_of_line();
-                    return;
-                }
+            if curr_index == 0 && self.text_location.line_index > 0 {
+                self.move_up(1);
+                self.move_to_end_of_line();
+                return;
             }
             
             self.text_location.grapheme_index = curr_index;
@@ -456,7 +454,7 @@ impl View {
     }
 
     fn snap_to_valid_line(&mut self) {
-        self.text_location.line_index = min(self.text_location.line_index, self.buffer.number_of_lines())
+        self.text_location.line_index = min(self.text_location.line_index, self.buffer.number_of_lines());
     }
     
     pub fn change_line_numbers(&mut self) {

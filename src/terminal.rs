@@ -17,14 +17,14 @@ pub struct Position {
 }
 
 impl Position {
-    pub const fn saturating_sub(&self, other: Position) -> Self {
+    pub const fn saturating_sub(&self, other: Self) -> Self {
         Self {
             row: self.row.saturating_sub(other.row),
             col: self.col.saturating_sub(other.col),
         }
     }
 
-    pub fn new(row: usize, col: usize) -> Self {
+    pub const fn new(row: usize, col: usize) -> Self {
         Self {
             row,
             col
@@ -72,6 +72,8 @@ impl Terminal {
         Self::queue_command(Clear(ClearType::CurrentLine))?;
         Ok(())
     }
+
+    #[allow(clippy::cast_possible_truncation)]
     pub fn move_caret(position: Position) -> Result<(), Error> {
         Self::queue_command(MoveTo(position.col as u16, position.row as u16))?;
         Ok(())

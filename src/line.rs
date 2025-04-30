@@ -75,7 +75,7 @@ impl Line {
             _ if width == 0 => {
                 let mut chars = grapheme.chars();
                 if let Some(ch) = chars.next() {
-                    if ch.is_control() && chars.next() == None {
+                    if ch.is_control() && chars.next().is_none() {
                         return Some('▯');
                     }
                 }
@@ -136,7 +136,7 @@ impl Line {
             .sum()
     }
 
-    pub fn get_fragments(&self) -> &Vec<Fragment> {
+    pub const fn get_fragments(&self) -> &Vec<Fragment> {
         &self.fragments
     }
 

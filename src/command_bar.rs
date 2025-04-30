@@ -23,7 +23,7 @@ impl UiComponent for CommandBar {
     }
 
     fn set_size(&mut self, size: Size) {
-        self.size = size
+        self.size = size;
     }
 
     fn draw(&mut self, position_y: usize) -> Result<(), Error> {

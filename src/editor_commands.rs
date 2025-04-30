@@ -122,7 +122,7 @@ impl TryFrom<Event> for Command {
                     width: width_u16 as usize,
                     height: height_u16 as usize,
                 }))),
-                _ => return Err(format!("The given event is currently not supported. Recived event: {event:?}")),
+                _ => Err(format!("The given event is currently not supported. Recived event: {event:?}")),
         }
     }
 }

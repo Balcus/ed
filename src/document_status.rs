@@ -12,7 +12,7 @@ impl DocumentStatus {
     
     pub(crate) fn modified_indicator_to_string(&self) -> String {
         if self.modified {
-            return String::from("(modified)");
+            String::from("(modified)")
         } else {
             String::new()
         }

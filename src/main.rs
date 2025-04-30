@@ -1,4 +1,10 @@
-#![warn(clippy::all, clippy::pedantic)]
+#![warn(
+    clippy::all,
+    clippy::pedantic,
+    clippy::nursery,
+    clippy::cargo
+)]
+
 mod editor;
 mod terminal;
 mod view;
@@ -15,11 +21,11 @@ mod message_bar;
 mod command_bar;
 
 fn main() {
-    let mut ed = Editor::new().unwrap();
+    let mut ed = Editor::new();
     if let Some(file_name) = args::parse_args() {
         ed.load(&file_name);
     }
-    ed.init().unwrap();
+    Editor::init().unwrap();
     ed.run();
 }
 

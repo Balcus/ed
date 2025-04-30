@@ -15,7 +15,7 @@ impl FileInfo {
         }
     }
 
-    pub fn has_path(&self) -> bool {
+    pub const fn has_path(&self) -> bool {
         self.path.is_some()
     }
     

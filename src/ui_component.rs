@@ -19,7 +19,7 @@ pub trait UiComponent {
                 Err(e) => {
                     #[cfg(debug_assertions)]
                     {
-                        panic!("Could not render component: {:?}", e);
+                        panic!("Could not render component: {e:?}");
                     }
                 },
             }
