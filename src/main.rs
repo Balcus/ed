@@ -11,7 +11,7 @@ mod view;
 mod buffer;
 mod editor_commands;
 mod line;
-use editor::Editor;
+use multi_editor::MultiEditor;
 mod status_bar;
 mod document_status;
 mod file_info;
@@ -19,13 +19,24 @@ mod args;
 mod ui_component;
 mod message_bar;
 mod command_bar;
+mod multi_editor;
+mod position;
+mod size;
 
 fn main() {
-    let mut ed = Editor::new();
+    // let mut ed = Editor::new();
+    // if let Some(file_name) = args::parse_args() {
+    //     ed.load(&file_name);
+    // }
+    // Editor::init().unwrap();
+    // ed.run();
+
+    let mut ed = MultiEditor::new();
     if let Some(file_name) = args::parse_args() {
         ed.load(&file_name);
     }
-    Editor::init().unwrap();
+
+    MultiEditor::init().unwrap();
     ed.run();
 }
 

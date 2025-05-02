@@ -1,5 +1,5 @@
 use std::io::Error;
-use crate::terminal::Size;
+use crate::size::Size;
 
 pub trait UiComponent {
     fn mark_redraw(&mut self, val: bool);

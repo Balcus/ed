@@ -1,4 +1,4 @@
-use crate::terminal::Size;
+use crate::size::Size;
 use crossterm::event::{Event, KeyCode, KeyModifiers, KeyEvent};
 
 #[derive(Copy, Clone)]

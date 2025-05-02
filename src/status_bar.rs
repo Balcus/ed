@@ -1,4 +1,5 @@
-use crate::terminal::{Terminal, Size};
+use crate::terminal::Terminal;
+use crate::size::Size;
 use crate::document_status::DocumentStatus;
 use crate::ui_component::UiComponent;
 

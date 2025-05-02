@@ -3,34 +3,9 @@ use crossterm::style::{Attribute, Print};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, size, Clear, ClearType, DisableLineWrap, EnableLineWrap, EnterAlternateScreen, LeaveAlternateScreen, SetTitle};
 use crossterm::{queue, Command};
 use std::io::{stdout, Error, Write};
+use crate::position::Position;
+use crate::size::Size;
 
-#[derive(Copy, Clone, Debug, Default)]
-pub struct Size {
-    pub height: usize,
-    pub width: usize,
-}
-
-#[derive(Copy, Clone, Default)]
-pub struct Position {
-    pub row: usize,
-    pub col: usize,
-}
-
-impl Position {
-    pub const fn saturating_sub(&self, other: Self) -> Self {
-        Self {
-            row: self.row.saturating_sub(other.row),
-            col: self.col.saturating_sub(other.col),
-        }
-    }
-
-    pub const fn new(row: usize, col: usize) -> Self {
-        Self {
-            row,
-            col
-        }
-    }
-}
 pub struct Terminal;
 
 impl Terminal {

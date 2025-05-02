@@ -1,11 +1,13 @@
 use crate::document_status::DocumentStatus;
 use crate::line::Line;
-use crate::terminal::{Position, Size, Terminal};
+use crate::terminal::Terminal;
+use crate::size::Size;
 use crate::buffer::Buffer;
 use crate::editor_commands::{Edit, Move};
 use crate::ui_component::UiComponent;
 use std::cmp::min;
 use std::io::Error;
+use crate::position::Position;
 
 pub const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION"); 
@@ -184,7 +186,6 @@ impl View {
             modified: self.buffer.dirty,
         }
     }
-
 
     // Write text
 
@@ -457,7 +458,7 @@ impl View {
         self.text_location.line_index = min(self.text_location.line_index, self.buffer.number_of_lines());
     }
     
-    pub fn change_line_numbers(&mut self) {
+    pub fn toggle_line_numbers(&mut self) {
         let show = self.show_line_numbers;
         self.show_line_numbers = !show;
         self.mark_redraw(true);

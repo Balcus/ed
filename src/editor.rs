@@ -1,11 +1,12 @@
 use crate::message_bar::MessageBar;
 use crate::status_bar::StatusBar;
-use crate::terminal::{Position, Size, Terminal};
+use crate::terminal::Terminal;
+use crate::size::Size;
+use crate::position::Position;
 use crate::ui_component::UiComponent;
 use crate::view::View;
 use crossterm::event::KeyEventKind;
 use crossterm::event::{read, Event, KeyEvent};
-use std::io::Error;
 use crate::editor_commands::{
     Command::{self, Edit, Move, System},
     System::{Quit, Resize, Save, ShowLineNumbers, Dismiss},
@@ -18,7 +19,7 @@ const TIMES_FOR_QUIT: u8 = 2;
 
 #[derive(Default)]
 pub struct Editor {
-    should_quit: bool,
+    pub should_quit: bool,
     view: View,
     title: String,
     terminal_size: Size,
@@ -30,12 +31,6 @@ pub struct Editor {
 
 impl Editor {
     pub fn new() -> Self {
-        let current_hook = std::panic::take_hook();
-        std::panic::set_hook(Box::new(move |panic_info| {
-            let _ = Terminal::terminate();
-            current_hook(panic_info);
-        }));
-        
         let mut editor = Self::default();
         let size = Terminal::size().unwrap_or_default();
         editor.resize(size);
@@ -44,9 +39,10 @@ impl Editor {
         editor
     }
 
-    pub fn init() -> Result<(), Error> {
-        Terminal::init()?;
-        Ok(())
+    pub fn set_needs_redraw(&mut self, val: bool) {
+        self.view.mark_redraw(val);
+        self.message_bar.mark_redraw(val);
+        self.status_bar.mark_redraw(val);
     }
 
     pub fn resize(&mut self, size: Size) {
@@ -71,6 +67,10 @@ impl Editor {
         }
     }
 
+    pub fn get_message_bar(&mut self) -> &mut MessageBar {
+        &mut self.message_bar
+    }
+
     pub fn refresh_status(&mut self) {
         let status = self.view.get_status();
         let title = format!("{} - {NAME}", status.file_name);
@@ -81,6 +81,7 @@ impl Editor {
         }
     }
 
+    #[allow(dead_code)]
     pub fn run(&mut self) {
         loop {
             let status = self.view.get_status();
@@ -102,7 +103,7 @@ impl Editor {
         }
     }
 
-    fn refresh_screen(&mut self) {
+    pub fn refresh_screen(&mut self) {
         if self.terminal_size.height == 0 || self.terminal_size.width == 0 {
             return;
         }
@@ -139,6 +140,7 @@ impl Editor {
         let _ = Terminal::execute();
     }
 
+    #[allow(dead_code)]
     fn evaluate_event(&mut self, event: Event) {
         let should_process = match &event {
             Event::Key(KeyEvent {kind, ..}) => kind == &KeyEventKind::Press,
@@ -157,10 +159,12 @@ impl Editor {
     pub(crate) fn load(&mut self, file_name: &str) {
         if self.view.load(file_name).is_err() {
             self.message_bar.update_message(&format!("ERROR: Failed to read file {file_name}"));
+        } else {
+            self.refresh_status();
         }
     }
     
-    fn process_command(&mut self, command: Command) {
+    pub fn process_command(&mut self, command: Command) {
         match command {
             System(Quit) => if self.command_bar.is_none() {
                 self.handle_quit();
@@ -177,7 +181,7 @@ impl Editor {
                 }
             },
             System(ShowLineNumbers) => {
-                self.view.change_line_numbers();
+                self.toggle_line_numbers();
             },
             System(Dismiss) => {
                 if self.command_bar.is_some() {
@@ -206,7 +210,7 @@ impl Editor {
         }
     }
     
-    fn handle_quit(&mut self) {
+    pub fn handle_quit(&mut self) {
         if !self.view.get_status().modified || self.quit_times + 1 == TIMES_FOR_QUIT {
             self.should_quit = true;
         } else {
@@ -214,8 +218,8 @@ impl Editor {
                 "WARNING: File has unsaved changes. Press ^Q {} more times to exit",
                 TIMES_FOR_QUIT - self.quit_times - 1
             ));
+            self.quit_times += 1;
         }
-        self.quit_times += 1;
     }
     
     fn dismiss_prompt(&mut self) {
@@ -229,11 +233,13 @@ impl Editor {
         } else {
             self.view.save()
         };
-
+    
         if result.is_err() {
             self.message_bar.update_message("Failed to save file");
         } else {
             self.message_bar.update_message("File saved successfully");
+            // Add this line to update status after saving
+            self.refresh_status();
         }
     }
 
@@ -255,14 +261,9 @@ impl Editor {
         command_bar.mark_redraw(true);
         self.command_bar = Some(command_bar);
     }
-}
-
-impl Drop for Editor {
-    fn drop(&mut self) {
-        let _ = Terminal::terminate();
-        if self.should_quit {
-            let _ = Terminal::print("Thank you for using ed!");
-        }
+    
+    pub fn toggle_line_numbers(&mut self) {
+        self.view.toggle_line_numbers();
     }
 }
 

@@ -1,6 +1,7 @@
 use crate::line::Line;
 use crate::ui_component::UiComponent;
-use crate::terminal::{Size, Terminal};
+use crate::terminal::Terminal;
+use crate::size::Size;
 use crate::editor_commands::Edit::{self, Insert, Delete, Backspace, Enter, RemoveLine};
 use std::cmp::min;
 use std::io::Error;
