@@ -5,8 +5,6 @@ use crate::size::Size;
 use crate::position::Position;
 use crate::ui_component::UiComponent;
 use crate::view::View;
-use crossterm::event::KeyEventKind;
-use crossterm::event::{read, Event, KeyEvent};
 use crate::editor_commands::{
     Command::{self, Edit, Move, System},
     System::{Quit, Resize, Save, ShowLineNumbers, Dismiss},
@@ -81,28 +79,6 @@ impl Editor {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn run(&mut self) {
-        loop {
-            let status = self.view.get_status();
-            self.status_bar.update_status(status);
-            self.refresh_screen();
-
-            if self.should_quit {
-                break;
-            }
-            match read() {
-                Ok(event) => self.evaluate_event(event),
-                Err(err) => {
-                    #[cfg(debug_assertions)]
-                    {
-                        panic!("Could not read event. Error: {err:?}")
-                    }
-                }
-            }
-        }
-    }
-
     pub fn refresh_screen(&mut self) {
         if self.terminal_size.height == 0 || self.terminal_size.width == 0 {
             return;
@@ -138,22 +114,6 @@ impl Editor {
         let _ = Terminal::move_caret(new_caret_position);
         let _ = Terminal::show_caret();
         let _ = Terminal::execute();
-    }
-
-    #[allow(dead_code)]
-    fn evaluate_event(&mut self, event: Event) {
-        let should_process = match &event {
-            Event::Key(KeyEvent {kind, ..}) => kind == &KeyEventKind::Press,
-            Event::Resize(_, _) => true,
-            _ => false,
-        };
-
-
-        if should_process {
-            if let Ok(command) = Command::try_from(event) {
-                self.process_command(command);
-            }
-        }
     }
     
     pub(crate) fn load(&mut self, file_name: &str) {

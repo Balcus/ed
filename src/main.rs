@@ -24,18 +24,10 @@ mod position;
 mod size;
 
 fn main() {
-    // let mut ed = Editor::new();
-    // if let Some(file_name) = args::parse_args() {
-    //     ed.load(&file_name);
-    // }
-    // Editor::init().unwrap();
-    // ed.run();
-
     let mut ed = MultiEditor::new();
     if let Some(file_name) = args::parse_args() {
         ed.load(&file_name);
     }
-
     MultiEditor::init().unwrap();
     ed.run();
 }

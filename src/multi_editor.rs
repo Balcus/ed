@@ -62,7 +62,7 @@ impl MultiEditor {
         self.active_editor().refresh_screen();
     }
 
-    fn display_message_to_editor(&mut self, message: &str) {
+    fn change_editor_message(&mut self, message: &str) {
         self.active_editor().get_message_bar().update_message(message);
     }
 
@@ -88,7 +88,7 @@ impl MultiEditor {
     
     fn evaluate_event(&mut self, event: Event) {
         if let Event::Key(KeyEvent {
-            code: KeyCode::Char('l'),
+            code: KeyCode::Char('p'),
             modifiers: KeyModifiers::CONTROL,
             kind: crossterm::event::KeyEventKind::Press,
             ..
@@ -99,7 +99,7 @@ impl MultiEditor {
         }
 
         if let Event::Key(KeyEvent {
-            code: KeyCode::Char('k'),
+            code: KeyCode::Char('o'),
             modifiers: KeyModifiers::CONTROL,
             kind: crossterm::event::KeyEventKind::Press,
             ..
@@ -116,16 +116,6 @@ impl MultiEditor {
             ..
         }) = event {
             self.create_new_editor();
-            return;
-        }
-
-        if let Event::Key(KeyEvent {
-            code: KeyCode::Char('t'),
-            modifiers: KeyModifiers::CONTROL,
-            kind: crossterm::event::KeyEventKind::Press,
-            ..
-        }) = event {
-            self.display_editor_index();
             return;
         }
 
@@ -149,12 +139,13 @@ impl MultiEditor {
             let _ = Terminal::clear();
             self.active_editor().set_needs_redraw(true);
             self.refresh_screen();
+            self.change_editor_message(&format!("Switched to editor window {editor_index}"));
         }
     }
     
     fn create_new_editor(&mut self) {
         self.editors.push(Editor::new());
-        self.display_message_to_editor(&format!("New editor created, {} editors are open", self.editors.iter().len()));
+        self.change_editor_message(&format!("New editor created, {} editors are open", self.editors.iter().len()));
     }
     
     fn process_command(&mut self, command: Command) {
@@ -163,7 +154,7 @@ impl MultiEditor {
                 self.active_editor().process_command(command);
                 
                 if self.active_editor().should_quit {
-                    if self.editors.len() == 1 {
+                    if self.editors.len() == 0 {
                         self.should_quit = true;
                     } else {
                         self.editors.remove(self.active_editor);
@@ -180,11 +171,6 @@ impl MultiEditor {
             },
             _ => self.active_editor().process_command(command),
         }
-    }
-    
-    fn display_editor_index(&mut self) {
-        let active_editor = self.active_editor;
-        self.active_editor().get_message_bar().update_message(&format!("You are currently in editor: {}", active_editor));
     }
 }
 
