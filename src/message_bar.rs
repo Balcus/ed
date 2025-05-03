@@ -41,6 +41,10 @@ impl MessageBar {
         self.message_cleared = false;
         self.mark_redraw(true);
     }
+    
+    pub(crate) fn set_needs_redraw(&mut self, value: bool) {
+        self.needs_redraw = value;
+    }
 }
 
 impl UiComponent for MessageBar {

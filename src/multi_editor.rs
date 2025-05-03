@@ -42,7 +42,7 @@ impl MultiEditor {
     fn resize(&mut self, size: Size)  {
         self.terminal_size = size;
         for editor in &mut self.editors {
-            editor.resize(size);
+            editor.handle_resize_command(size);
         }
     }
 

@@ -35,7 +35,7 @@ impl UiComponent for CommandBar {
         let message = format!(
             "{}{}",
             self.prompt,
-            self.value.get_substr(value_start..value_end)
+            self.value.get_visible_graphemes(value_start..value_end)
         );
 
         let to_print = if message.len() <= self.size.width {
@@ -53,11 +53,11 @@ impl CommandBar {
     pub fn handle_edit_command(&mut self, command: Edit) {
         match command {
             Insert(c) =>  {
-                self.value.append_character(c);
+                self.value.append_char(c);
                 self.mark_redraw(true);
             }
             Backspace => {
-                self.value.delete_last_character();
+                self.value.delete_last();
                 self.mark_redraw(true);
             }
             Delete | Enter | RemoveLine => {}
@@ -75,6 +75,11 @@ impl CommandBar {
 
     pub fn set_prompt(&mut self, new_prompt: &str) {
         self.prompt = new_prompt.to_string();
+        self.mark_redraw(true);
+    }
+
+    pub fn clear_value(&mut self) {
+        self.value = Line::default();
         self.mark_redraw(true);
     }
 }

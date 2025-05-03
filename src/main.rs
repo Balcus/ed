@@ -23,6 +23,12 @@ mod multi_editor;
 mod position;
 mod size;
 
+/* TODO! :
+    * file flag should work with multiple arguments, each opened in a separate editor window
+    * add option to open a file from the command bar
+    * continue with the find command
+*/
+
 fn main() {
     let mut ed = MultiEditor::new();
     if let Some(file_name) = args::parse_args() {

@@ -79,7 +79,7 @@ impl UiComponent for View {
             if let Some(line) = self.buffer.lines.get(line_idx) {
                 let left = self.scroll_offset.col;
                 let right = self.scroll_offset.col.saturating_add(content_width);
-                let content = line.get_substr(left..right);
+                let content = line.get_visible_graphemes(left..right);
                 
                 Terminal::move_caret(Position::new(current_row, content_start))?;
                 Terminal::print(&content)?;
@@ -161,7 +161,7 @@ impl View {
     fn text_location_to_position(&self) -> Position {
         let row = self.text_location.line_index;
         let col = self.buffer.lines.get(row).map_or(0, |line|{
-            line.sum_width_until(self.text_location.grapheme_index)
+            line.width_until(self.text_location.grapheme_index)
         });
         
         Position {
