@@ -1,17 +1,17 @@
-use crate::message_bar::MessageBar;
-use crate::status_bar::StatusBar;
-use crate::terminal::Terminal;
-use crate::size::Size;
-use crate::position::Position;
-use crate::ui_component::UiComponent;
-use crate::view::View;
+use crate::command_bar::CommandBar;
 use crate::editor_commands::{
     Command::{self, Edit, Move, System},
-    System::{Quit, Resize, Save, ShowLineNumbers, Dismiss, Search},
     Edit::Enter,
+    System::{Dismiss, Quit, Resize, Save, Search, ShowLineNumbers},
 };
+use crate::message_bar::MessageBar;
+use crate::position::Position;
+use crate::size::Size;
+use crate::status_bar::StatusBar;
+use crate::terminal::Terminal;
+use crate::ui_component::UiComponent;
 use crate::view::NAME;
-use crate::command_bar::CommandBar;
+use crate::view::View;
 
 const TIMES_FOR_QUIT: u8 = 2;
 
@@ -48,7 +48,9 @@ impl Editor {
         let size = Terminal::size().unwrap_or_default();
         editor.handle_resize_command(size);
         editor.refresh_status();
-        editor.message_bar.update_message("help: ^S - save | ^Q - quit | ^F find (see help page for more)");
+        editor
+            .message_bar
+            .update_message("help: ^S - save | ^Q - quit | ^F find (see help page for more)");
         editor
     }
 
@@ -76,7 +78,7 @@ impl Editor {
         }
     }
 
-    pub fn refresh_screen(&mut self) {        
+    pub fn refresh_screen(&mut self) {
         if self.terminal_size.height == 0 || self.terminal_size.width == 0 {
             return;
         }
@@ -91,12 +93,13 @@ impl Editor {
         }
 
         if self.terminal_size.height > 1 {
-            self.status_bar.render(self.terminal_size.height.saturating_sub(2));
+            self.status_bar
+                .render(self.terminal_size.height.saturating_sub(2));
             self.refresh_status();
         }
 
         if self.terminal_size.height > 2 {
-            self.view.render(0);    
+            self.view.render(0);
         }
 
         let new_caret_position = if !self.in_prompt() {
@@ -112,10 +115,11 @@ impl Editor {
         let _ = Terminal::show_caret();
         let _ = Terminal::execute();
     }
-    
+
     pub(crate) fn load(&mut self, file_name: &str) {
         if self.view.load(file_name).is_err() {
-            self.message_bar.update_message(&format!("ERROR: Failed to read file {file_name}"));
+            self.message_bar
+                .update_message(&format!("ERROR: Failed to read file {file_name}"));
         } else {
             self.refresh_status();
         }
@@ -129,7 +133,7 @@ impl Editor {
         self.reset_quit_times();
 
         match command {
-            System(Quit | Resize(_) | Dismiss) => {},
+            System(Quit | Resize(_) | Dismiss) => {}
             System(Search) => self.set_prompt(PromptType::Search),
             System(Save) => self.handle_save_command(),
             System(ShowLineNumbers) => self.toggle_line_numbers(),
@@ -140,7 +144,7 @@ impl Editor {
 
     fn process_command_during_save(&mut self, command: Command) {
         match command {
-            System(Quit | Resize(_) | Search | Save | ShowLineNumbers) | Move(_) => {},
+            System(Quit | Resize(_) | Search | Save | ShowLineNumbers) | Move(_) => {}
             System(Dismiss) => {
                 self.set_prompt(PromptType::None);
                 self.message_bar.update_message("Save aborted!");
@@ -156,11 +160,11 @@ impl Editor {
 
     fn process_command_during_search(&mut self, command: Command) {
         match command {
-            System(Quit | Resize(_) | Search | Save | ShowLineNumbers) | Move(_) => {},
+            System(Quit | Resize(_) | Search | Save | ShowLineNumbers) | Move(_) => {}
             System(Dismiss) => {
                 self.set_prompt(PromptType::None);
                 self.view.dimiss_search();
-            },
+            }
             Edit(Enter) => {
                 self.set_prompt(PromptType::None);
                 self.view.exit_search();
@@ -172,7 +176,7 @@ impl Editor {
             }
         }
     }
-    
+
     pub fn process_command(&mut self, command: Command) {
         if let System(Resize(size)) = command {
             self.handle_resize_command(size);
@@ -200,7 +204,7 @@ impl Editor {
         self.status_bar.resize(bar_size);
         self.command_bar.resize(bar_size);
     }
-    
+
     pub fn handle_quit(&mut self) {
         if !self.view.get_status().modified || self.quit_times + 1 == TIMES_FOR_QUIT {
             self.should_quit = true;
@@ -212,14 +216,14 @@ impl Editor {
             self.quit_times += 1;
         }
     }
-    
+
     fn save(&mut self, file_name: Option<&String>) {
         let result = if let Some(name) = file_name {
             self.view.save_as(name)
         } else {
             self.view.save()
         };
-    
+
         if result.is_err() {
             self.message_bar.update_message("Failed to save file");
         } else {
@@ -235,15 +239,15 @@ impl Editor {
             self.set_prompt(PromptType::Save);
         }
     }
-    
+
     pub fn toggle_line_numbers(&mut self) {
         self.view.toggle_line_numbers();
     }
-    
-    fn reset_quit_times(&mut self)  {
+
+    fn reset_quit_times(&mut self) {
         self.quit_times = 0;
     }
-    
+
     fn set_prompt(&mut self, prompt_type: PromptType) {
         match prompt_type {
             PromptType::None => self.message_bar.set_needs_redraw(true),
@@ -251,10 +255,9 @@ impl Editor {
             PromptType::Search => {
                 self.view.enter_search();
                 self.command_bar.set_prompt("Find: ")
-            },
+            }
         }
         self.command_bar.clear_value();
         self.prompt_type = prompt_type;
     }
 }
-

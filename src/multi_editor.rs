@@ -1,11 +1,11 @@
-use std::vec;
-use std::io::Error;
-use crate::{editor::Editor, editor_commands::Command, size::Size, terminal::Terminal};
-use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyModifiers};
 use crate::editor_commands::{
     Command::System,
     System::{Quit, Resize},
 };
+use crate::{editor::Editor, editor_commands::Command, size::Size, terminal::Terminal};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, read};
+use std::io::Error;
+use std::vec;
 
 pub struct MultiEditor {
     editors: Vec<Editor>,
@@ -38,8 +38,8 @@ impl MultiEditor {
         multi_editor.resize(size);
         multi_editor
     }
-    
-    fn resize(&mut self, size: Size)  {
+
+    fn resize(&mut self, size: Size) {
         self.terminal_size = size;
         for editor in &mut self.editors {
             editor.handle_resize_command(size);
@@ -54,8 +54,18 @@ impl MultiEditor {
         &mut self.editors[self.active_editor]
     }
 
-    pub fn load(&mut self, file_name: &str) {
-        self.active_editor().load(file_name);
+    pub fn load(&mut self, file_names: Vec<String>) {
+        if file_names.is_empty() {
+            return;
+        }
+
+        self.active_editor().load(&file_names[0]);
+
+        for file_name in file_names.iter().skip(1) {
+            self.create_new_editor();
+            self.active_editor += 1;
+            self.active_editor().load(file_name);
+        }
     }
 
     fn refresh_screen(&mut self) {
@@ -63,17 +73,19 @@ impl MultiEditor {
     }
 
     fn change_editor_message(&mut self, message: &str) {
-        self.active_editor().get_message_bar().update_message(message);
+        self.active_editor()
+            .get_message_bar()
+            .update_message(message);
     }
 
     pub fn run(&mut self) {
         loop {
             self.refresh_screen();
-            
+
             if self.should_quit {
                 break;
             }
-            
+
             match read() {
                 Ok(event) => self.evaluate_event(event),
                 Err(err) => {
@@ -85,14 +97,15 @@ impl MultiEditor {
             }
         }
     }
-    
+
     fn evaluate_event(&mut self, event: Event) {
         if let Event::Key(KeyEvent {
             code: KeyCode::Char('p'),
             modifiers: KeyModifiers::CONTROL,
             kind: crossterm::event::KeyEventKind::Press,
             ..
-        }) = event {
+        }) = event
+        {
             let editor_index = self.active_editor.saturating_add(1);
             self.switch_editor(editor_index);
             return;
@@ -103,7 +116,8 @@ impl MultiEditor {
             modifiers: KeyModifiers::CONTROL,
             kind: crossterm::event::KeyEventKind::Press,
             ..
-        }) = event {
+        }) = event
+        {
             let editor_index = self.active_editor.saturating_sub(1);
             self.switch_editor(editor_index);
             return;
@@ -114,17 +128,17 @@ impl MultiEditor {
             modifiers: KeyModifiers::CONTROL,
             kind: crossterm::event::KeyEventKind::Press,
             ..
-        }) = event {
+        }) = event
+        {
             self.create_new_editor();
             return;
         }
 
         let should_process = match &event {
-            Event::Key(KeyEvent {kind, ..}) => kind == &crossterm::event::KeyEventKind::Press,
+            Event::Key(KeyEvent { kind, .. }) => kind == &crossterm::event::KeyEventKind::Press,
             Event::Resize(_, _) => true,
             _ => false,
         };
-
 
         if should_process {
             if let Ok(command) = Command::try_from(event) {
@@ -132,7 +146,7 @@ impl MultiEditor {
             }
         }
     }
-    
+
     fn switch_editor(&mut self, editor_index: usize) {
         if editor_index < self.editors.len() {
             self.active_editor = editor_index;
@@ -142,19 +156,22 @@ impl MultiEditor {
             self.change_editor_message(&format!("Switched to editor window {editor_index}"));
         }
     }
-    
+
     fn create_new_editor(&mut self) {
         self.editors.push(Editor::new());
-        self.change_editor_message(&format!("New editor created, {} editors are open", self.editors.iter().len()));
+        self.change_editor_message(&format!(
+            "New editor created, {} editors are open",
+            self.editors.iter().len()
+        ));
     }
-    
+
     fn process_command(&mut self, command: Command) {
         match command {
             System(Quit) => {
                 self.active_editor().process_command(command);
-                
+
                 if self.active_editor().should_quit {
-                    if self.editors.len() == 0 {
+                    if self.editors.len() <= 1 {
                         self.should_quit = true;
                     } else {
                         self.editors.remove(self.active_editor);
@@ -165,10 +182,10 @@ impl MultiEditor {
                         self.active_editor().set_needs_redraw(true);
                     }
                 }
-            },
+            }
             System(Resize(size)) => {
                 self.resize(size);
-            },
+            }
             _ => self.active_editor().process_command(command),
         }
     }

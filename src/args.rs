@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -6,15 +6,29 @@ use clap::Parser;
     version,
     about = "Simple terminal text editor",
     long_about = None,
-    after_help = "Giuhub page: https://github.com/Balcus/ed"
+    after_help = "Github page: https://github.com/Balcus/ed"
 )]
 pub struct Args {
-    /// Name of file to open in the editor
-    #[arg(short = 'f', long = "file", value_name = "FILE")]
-    pub file_name: Option<String>,
+    #[command(subcommand)]
+    pub command: Command,
 }
 
-pub(crate) fn parse_args() -> Option<String> {
+#[derive(Subcommand, Debug)]
+pub enum Command {
+    /// Used to open the given files inside separate editor windows
+    Open {
+        /// Name of files to be opened
+        #[arg(value_name = "FILE")]
+        file_names: Vec<String>,
+    },
+}
+
+pub(crate) fn parse_args() -> Vec<String> {
     let args = Args::parse();
-    args.file_name
+    match args.command {
+        Command::Open { file_names } => file_names
+            .into_iter()
+            .map(|f| f.trim().to_string())
+            .collect(),
+    }
 }
