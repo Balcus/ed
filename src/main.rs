@@ -11,6 +11,7 @@ mod args;
 mod command_bar;
 mod document_status;
 mod file_info;
+mod location;
 mod message_bar;
 mod multi_editor;
 mod position;
@@ -21,6 +22,7 @@ mod ui_component;
 
 /* TODO! :
  * add option to open a file from the command bar
+ * some visual feedback for find
 */
 
 fn main() {

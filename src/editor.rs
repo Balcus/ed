@@ -2,6 +2,7 @@ use crate::command_bar::CommandBar;
 use crate::editor_commands::{
     Command::{self, Edit, Move, System},
     Edit::Enter,
+    Move::Down,
     System::{Dismiss, Quit, Resize, Save, Search, ShowLineNumbers},
 };
 use crate::message_bar::MessageBar;
@@ -10,8 +11,7 @@ use crate::size::Size;
 use crate::status_bar::StatusBar;
 use crate::terminal::Terminal;
 use crate::ui_component::UiComponent;
-use crate::view::NAME;
-use crate::view::View;
+use crate::view::{NAME, View};
 
 const TIMES_FOR_QUIT: u8 = 2;
 
@@ -160,7 +160,7 @@ impl Editor {
 
     fn process_command_during_search(&mut self, command: Command) {
         match command {
-            System(Quit | Resize(_) | Search | Save | ShowLineNumbers) | Move(_) => {}
+            System(Quit | Resize(_) | Search | Save | ShowLineNumbers) => {}
             System(Dismiss) => {
                 self.set_prompt(PromptType::None);
                 self.view.dimiss_search();
@@ -174,6 +174,10 @@ impl Editor {
                 let query = self.command_bar.value();
                 self.view.search(&query);
             }
+            Move(Down) => {
+                self.view.search_next();
+            }
+            Move(_) => {}
         }
     }
 
