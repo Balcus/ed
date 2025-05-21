@@ -2,6 +2,9 @@ use std::{fmt, ops::Range};
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
+type GraphemeIndex = usize;
+type ByteIndex = usize;
+
 #[derive(Copy, Clone)]
 enum GraphemeWidth {
     Half,
@@ -17,6 +20,7 @@ impl GraphemeWidth {
     }
 }
 
+#[derive(Clone)]
 pub struct TextFragment {
     pub grapheme: String,
     rendered_width: GraphemeWidth,
@@ -24,7 +28,7 @@ pub struct TextFragment {
     start_byte_idx: usize,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Line {
     fragments: Vec<TextFragment>,
     string: String,
@@ -39,26 +43,27 @@ impl Line {
         }
     }
 
-    pub fn search(&self, query: &str) -> Option<usize> {
+    pub fn search(&self, from_grapheme_index: GraphemeIndex, query: &str) -> Option<GraphemeIndex> {
+        let start_byte_index = self.grapheme_to_byte_idx(from_grapheme_index);
         self.string
-            .find(query)
-            .map(|byte_index| self.byte_to_grapheme_idx(byte_index))
+            .get(start_byte_index..)
+            .and_then(|substr| substr.find(query))
+            .map(|byte_index| {
+                self.byte_to_grapheme_idx(byte_index.saturating_add(start_byte_index))
+            })
     }
 
-    pub fn byte_to_grapheme_idx(&self, byte_index: usize) -> usize {
-        for(grapheme_idx, fragment) in self.fragments.iter().enumerate() {
-            if fragment.start_byte_idx >= byte_index {
-                return grapheme_idx;
-            }
-        }
-        #[cfg(debug_assertions)]
-        {
-            panic!("Invalid byte_idx passed to byte_idx_to_grapheme_idx: {byte_index:?}");
-        }
-        #[cfg(not(debug_assertions))]
-        {
-            0
-        }
+    pub fn byte_to_grapheme_idx(&self, byte_index: ByteIndex) -> GraphemeIndex {
+        self.fragments
+            .iter()
+            .position(|fragment| fragment.start_byte_idx >= byte_index)
+            .map_or(0, |grapheme_index| grapheme_index)
+    }
+
+    fn grapheme_to_byte_idx(&self, grapheme_index: GraphemeIndex) -> ByteIndex {
+        self.fragments
+            .get(grapheme_index)
+            .map_or(0, |fragment| fragment.start_byte_idx)
     }
 
     pub fn get_fragments(&self) -> &Vec<TextFragment> {
@@ -115,7 +120,7 @@ impl Line {
         }
     }
 
-    pub fn get_visible_graphemes(&self, range: Range<usize>) -> String {
+    pub fn get_visible_graphemes(&self, range: Range<GraphemeIndex>) -> String {
         if range.start >= range.end {
             return String::new();
         }
@@ -141,10 +146,11 @@ impl Line {
         result
     }
 
-    pub fn grapheme_count(&self) -> usize {
+    pub fn grapheme_count(&self) -> GraphemeIndex {
         self.fragments.len()
     }
-    pub fn width_until(&self, grapheme_index: usize) -> usize {
+
+    pub fn width_until(&self, grapheme_index: GraphemeIndex) -> GraphemeIndex {
         self.fragments
             .iter()
             .take(grapheme_index)
@@ -154,10 +160,11 @@ impl Line {
             })
             .sum()
     }
-    pub fn width(&self) -> usize {
+
+    pub fn width(&self) -> GraphemeIndex {
         self.width_until(self.grapheme_count())
     }
-    // Inserts a character into the line, or appends it at the end if at > len of the string
+
     pub fn insert_char(&mut self, character: char, at: usize) {
         if let Some(fragment) = self.fragments.get(at) {
             self.string.insert(fragment.start_byte_idx, character);
@@ -166,10 +173,12 @@ impl Line {
         }
         self.rebuild_fragments();
     }
+
     pub fn append_char(&mut self, character: char) {
         self.insert_char(character, self.grapheme_count());
     }
-    pub fn delete(&mut self, at: usize) {
+
+    pub fn delete(&mut self, at: GraphemeIndex) {
         if let Some(fragment) = self.fragments.get(at) {
             let start = fragment.start_byte_idx;
             let end = fragment
@@ -189,7 +198,7 @@ impl Line {
         self.rebuild_fragments();
     }
 
-    pub fn split(&mut self, at: usize) -> Self {
+    pub fn split(&mut self, at: GraphemeIndex) -> Self {
         if let Some(fragment) = self.fragments.get(at) {
             let remainder = self.string.split_off(fragment.start_byte_idx);
             self.rebuild_fragments();

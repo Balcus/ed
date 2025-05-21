@@ -1,15 +1,15 @@
+use crate::file_info::FileInfo;
+use crate::line::Line;
+use crate::view::Location;
 use std::fs::File;
 use std::io::Write;
 use std::{char, fs::read_to_string, io::Error};
-use crate::line::Line;
-use crate::view::Location;
-use crate::file_info::FileInfo;
 
 #[derive(Default)]
 pub struct Buffer {
     pub file_info: FileInfo,
     pub lines: Vec<Line>,
-    pub dirty: bool
+    pub dirty: bool,
 }
 
 impl Buffer {
@@ -23,7 +23,7 @@ impl Buffer {
         for line in file_content.lines() {
             lines.push(Line::from(line));
         }
-        
+
         Ok(Self {
             lines,
             file_info: FileInfo::from(file_name),
@@ -64,7 +64,7 @@ impl Buffer {
         if at.line_index >= self.lines.len() {
             return;
         }
-        
+
         if at.grapheme_index >= self.lines[at.line_index].grapheme_count() {
             if at.line_index < self.lines.len() - 1 {
                 let next_line = self.lines.remove(at.line_index + 1);
@@ -84,7 +84,7 @@ impl Buffer {
             self.dirty = true;
         }
     }
-    
+
     pub fn insert_newline(&mut self, at: &Location) {
         if at.line_index == self.number_of_lines() {
             self.lines.push(Line::default());
@@ -95,7 +95,7 @@ impl Buffer {
             self.dirty = true;
         }
     }
-    
+
     pub(crate) fn save_as(&mut self, file_name: &str) -> Result<(), Error> {
         let file_info = FileInfo::from(file_name);
         self.save_to_file(&file_info)?;
@@ -103,7 +103,7 @@ impl Buffer {
         self.dirty = false;
         Ok(())
     }
-    
+
     fn save_to_file(&self, file_info: &FileInfo) -> Result<(), Error> {
         if let Some(file_path) = &file_info.get_path() {
             let mut file = File::create(file_path)?;
@@ -113,14 +113,29 @@ impl Buffer {
         }
         Ok(())
     }
-    
-    pub(crate) fn search(&self, query: &str) -> Option<Location> {
-        for (line_index, line) in self.lines.iter().enumerate() {
-            if let Some(grapheme_index) = line.search(query) {
+
+    pub(crate) fn search(&self, from: &Location, query: &str) -> Option<Location> {
+        for (line_index, line) in self.lines.iter().enumerate().skip(from.line_index) {
+            let from_grapheme_index = if line_index == from.line_index {
+                from.grapheme_index
+            } else {
+                0
+            };
+            if let Some(grapheme_index) = line.search(from_grapheme_index, query) {
                 return Some(Location {
                     line_index,
-                    grapheme_index
+                    grapheme_index,
                 });
+            }
+        }
+        for (line_index, line) in self.lines.iter().enumerate() {
+            if line_index <= from.line_index {
+                if let Some(grapheme_index) = line.search(0, query) {
+                    return Some(Location {
+                        line_index,
+                        grapheme_index,
+                    });
+                }
             }
         }
         None
