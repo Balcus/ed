@@ -22,9 +22,11 @@ mod command_bar;
 mod multi_editor;
 mod position;
 mod size;
+mod serach_info;
 
 /* TODO! :
     * file flag should work with multiple arguments, each opened in a separate editor window
+    * the status bar does not update properly for each editor window after switching
     * add option to open a file from the command bar
     * continue with the find command
 */

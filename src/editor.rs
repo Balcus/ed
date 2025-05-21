@@ -76,7 +76,7 @@ impl Editor {
         }
     }
 
-    pub fn refresh_screen(&mut self) {
+    pub fn refresh_screen(&mut self) {        
         if self.terminal_size.height == 0 || self.terminal_size.width == 0 {
             return;
         }
@@ -92,6 +92,7 @@ impl Editor {
 
         if self.terminal_size.height > 1 {
             self.status_bar.render(self.terminal_size.height.saturating_sub(2));
+            self.refresh_status();
         }
 
         if self.terminal_size.height > 2 {
@@ -156,8 +157,19 @@ impl Editor {
     fn process_command_during_search(&mut self, command: Command) {
         match command {
             System(Quit | Resize(_) | Search | Save | ShowLineNumbers) | Move(_) => {},
-            System(Dismiss) | Edit(Enter) => self.set_prompt(PromptType::None),
-            Edit(edit_command) => self.command_bar.handle_edit_command(edit_command),
+            System(Dismiss) => {
+                self.set_prompt(PromptType::None);
+                self.view.dimiss_search();
+            },
+            Edit(Enter) => {
+                self.set_prompt(PromptType::None);
+                self.view.exit_search();
+            }
+            Edit(edit_command) => {
+                self.command_bar.handle_edit_command(edit_command);
+                let query = self.command_bar.value();
+                self.view.search(&query);
+            }
         }
     }
     
@@ -236,7 +248,10 @@ impl Editor {
         match prompt_type {
             PromptType::None => self.message_bar.set_needs_redraw(true),
             PromptType::Save => self.command_bar.set_prompt("Save as: "),
-            PromptType::Search => self.command_bar.set_prompt("Find: "),
+            PromptType::Search => {
+                self.view.enter_search();
+                self.command_bar.set_prompt("Find: ")
+            },
         }
         self.command_bar.clear_value();
         self.prompt_type = prompt_type;

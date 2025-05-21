@@ -1,5 +1,6 @@
 use crate::document_status::DocumentStatus;
 use crate::line::Line;
+use crate::serach_info::SearchInfo;
 use crate::terminal::Terminal;
 use crate::size::Size;
 use crate::buffer::Buffer;
@@ -12,7 +13,7 @@ use crate::position::Position;
 pub const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION"); 
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct Location {
     pub line_index: usize,
     pub grapheme_index: usize,
@@ -26,6 +27,7 @@ pub struct View {
     text_location: Location,
     scroll_offset: Position,
     show_line_numbers: bool,
+    search_info: Option<SearchInfo>,
 }
 
 impl UiComponent for View {
@@ -97,6 +99,37 @@ impl UiComponent for View {
 }
 
 impl View {
+
+    pub fn dimiss_search(&mut self) {
+        if let Some(search_info) = &self.search_info {
+            self.text_location = search_info.prev_location;
+        }
+        self.search_info = None;
+        self.scroll_text_location_into_view();
+    }
+
+    pub fn enter_search(&mut self) {
+        self.search_info = Some(
+            SearchInfo {
+                prev_location: self.text_location
+            }
+        );
+    }
+
+    pub fn exit_search(&mut self) {
+        self.search_info = None;
+    }
+
+    pub fn search(&mut self, query: &str) {
+        if query.is_empty() {
+            return;
+        }
+
+        if let Some(location) = self.buffer.search(query) {
+            self.text_location = location;
+            self.scroll_text_location_into_view();
+        }
+    }
 
     // Important functions
 

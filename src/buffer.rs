@@ -113,4 +113,16 @@ impl Buffer {
         }
         Ok(())
     }
+    
+    pub(crate) fn search(&self, query: &str) -> Option<Location> {
+        for (line_index, line) in self.lines.iter().enumerate() {
+            if let Some(grapheme_index) = line.search(query) {
+                return Some(Location {
+                    line_index,
+                    grapheme_index
+                });
+            }
+        }
+        None
+    }
 }

@@ -39,6 +39,28 @@ impl Line {
         }
     }
 
+    pub fn search(&self, query: &str) -> Option<usize> {
+        self.string
+            .find(query)
+            .map(|byte_index| self.byte_to_grapheme_idx(byte_index))
+    }
+
+    pub fn byte_to_grapheme_idx(&self, byte_index: usize) -> usize {
+        for(grapheme_idx, fragment) in self.fragments.iter().enumerate() {
+            if fragment.start_byte_idx >= byte_index {
+                return grapheme_idx;
+            }
+        }
+        #[cfg(debug_assertions)]
+        {
+            panic!("Invalid byte_idx passed to byte_idx_to_grapheme_idx: {byte_index:?}");
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            0
+        }
+    }
+
     pub fn get_fragments(&self) -> &Vec<TextFragment> {
         &self.fragments
     }
