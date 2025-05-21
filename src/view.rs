@@ -100,6 +100,8 @@ impl UiComponent for View {
 
 impl View {
 
+    // === Search === //
+
     pub fn dimiss_search(&mut self) {
         if let Some(search_info) = &self.search_info {
             self.text_location = search_info.prev_location;
@@ -131,11 +133,11 @@ impl View {
         }
     }
 
-    // Important functions
-
     pub const fn is_file_loaded(&self) -> bool {
         self.buffer.file_info.has_path()
     }
+
+    // === Command Handlers === //
 
     pub fn handle_edit_command(&mut self, command: Edit) {
         match command {
@@ -164,6 +166,16 @@ impl View {
         self.scroll_text_location_into_view();
     }
 
+    // === Saving Files === //
+
+    pub(crate) fn save(&mut self) -> Result<(), Error> {
+        self.buffer.save()
+    }
+    
+    pub(crate) fn save_as(&mut self, file_name: &str ) -> Result<(), Error> {
+        self.buffer.save_as(file_name)
+    }
+
     pub fn load(&mut self, file_name: &str) -> Result<(), Error> {
         match Buffer::load(file_name) {
             Ok(buffer) => {
@@ -175,52 +187,7 @@ impl View {
         }
     }
 
-    fn build_welcome_message(width: usize) -> String {
-        if width == 0 {
-            return String::new();
-        }
-        let welcome_message = format!("{NAME} editor -- version {VERSION}");
-        let len = welcome_message.len();
-        
-        let remainign_width = width.saturating_sub(1);
-
-        if remainign_width < len {
-            return "~".to_string();
-        }
-        
-        format!("{:<1}{:^remainign_width$}", "~", welcome_message)
-    }
-
-    fn text_location_to_position(&self) -> Position {
-        let row = self.text_location.line_index;
-        let col = self.buffer.lines.get(row).map_or(0, |line|{
-            line.width_until(self.text_location.grapheme_index)
-        });
-        
-        Position {
-            row,
-            col
-        }
-    }
-
-    pub fn get_caret_position(&self) -> Position {
-        let mut position = self.text_location_to_position().saturating_sub(self.scroll_offset);
-        if self.show_line_numbers {
-            position.col = position.col.saturating_add(6);
-        }
-        position
-    }
-
-    pub fn get_status(&self) -> DocumentStatus {
-        DocumentStatus {
-            file_name: format!("{}", self.buffer.file_info),
-            number_of_lines: self.buffer.number_of_lines(),
-            line_number: self.text_location.line_index,
-            modified: self.buffer.dirty,
-        }
-    }
-
-    // Write text
+    // === Write text === //
 
     fn insert_character(&mut self, c: char) {
         let old_grapheme_len = self
@@ -252,7 +219,7 @@ impl View {
         self.mark_redraw(true);
     }
 
-    // Delete text
+    // === Delete text === //
 
     fn backspace(&mut self) {
         if self.text_location.grapheme_index == 0 && self.text_location.line_index == 0 {
@@ -273,7 +240,7 @@ impl View {
         self.mark_redraw(true);
     }
 
-    // Movement functions 
+    // === Movement functions === //
 
     fn move_up(&mut self, step: usize) {
         self.text_location.line_index = self.text_location.line_index.saturating_sub(step);
@@ -433,7 +400,7 @@ impl View {
     }
 
 
-    // Scroll text
+    // === Scroll === //
 
     fn scroll_horizontally(&mut self, to: usize) {
         let Size {width, ..} = self.size;
@@ -469,7 +436,7 @@ impl View {
         }
     }
 
-    // Fixup functions
+    // === Fixup functions === //
 
     fn scroll_text_location_into_view(&mut self) {
         let Position{ row, col } = self.text_location_to_position();
@@ -490,18 +457,57 @@ impl View {
     fn snap_to_valid_line(&mut self) {
         self.text_location.line_index = min(self.text_location.line_index, self.buffer.number_of_lines());
     }
-    
+
+    // === Other === //
+
     pub fn toggle_line_numbers(&mut self) {
         let show = self.show_line_numbers;
         self.show_line_numbers = !show;
         self.mark_redraw(true);
     }
-    
-    pub(crate) fn save(&mut self) -> Result<(), Error> {
-        self.buffer.save()
+
+    fn build_welcome_message(width: usize) -> String {
+        if width == 0 {
+            return String::new();
+        }
+        let welcome_message = format!("{NAME} editor -- version {VERSION}");
+        let len = welcome_message.len();
+        
+        let remainign_width = width.saturating_sub(1);
+
+        if remainign_width < len {
+            return "~".to_string();
+        }
+        
+        format!("{:<1}{:^remainign_width$}", "~", welcome_message)
     }
-    
-    pub(crate) fn save_as(&mut self, file_name: &str ) -> Result<(), Error> {
-        self.buffer.save_as(file_name)
+
+    fn text_location_to_position(&self) -> Position {
+        let row = self.text_location.line_index;
+        let col = self.buffer.lines.get(row).map_or(0, |line|{
+            line.width_until(self.text_location.grapheme_index)
+        });
+        
+        Position {
+            row,
+            col
+        }
+    }
+
+    pub fn get_caret_position(&self) -> Position {
+        let mut position = self.text_location_to_position().saturating_sub(self.scroll_offset);
+        if self.show_line_numbers {
+            position.col = position.col.saturating_add(6);
+        }
+        position
+    }
+
+    pub fn get_status(&self) -> DocumentStatus {
+        DocumentStatus {
+            file_name: format!("{}", self.buffer.file_info),
+            number_of_lines: self.buffer.number_of_lines(),
+            line_number: self.text_location.line_index,
+            modified: self.buffer.dirty,
+        }
     }
 }
