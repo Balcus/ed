@@ -31,20 +31,11 @@ impl Buffer {
         })
     }
 
-    pub fn save(&mut self) -> Result<(), Error> {
-        if let Some(name) = &self.file_info.path {
-            let mut path = File::create(name)?;
-            for line in &self.lines {
-                writeln!(path, "{line}")?;
-            }
-            self.dirty = false;
-        }
-        Ok(())
-    }
-
     pub fn number_of_lines(&self) -> usize {
         self.lines.len()
     }
+
+    // === Edit Buffer === //
 
     pub fn insert_char(&mut self, character: char, at: &Location) {
         if at.line_index > self.lines.len() {
@@ -96,6 +87,8 @@ impl Buffer {
         }
     }
 
+    // === Save === //
+
     pub(crate) fn save_as(&mut self, file_name: &str) -> Result<(), Error> {
         let file_info = FileInfo::from(file_name);
         self.save_to_file(&file_info)?;
@@ -114,28 +107,82 @@ impl Buffer {
         Ok(())
     }
 
-    pub(crate) fn search(&self, from: &Location, query: &str) -> Option<Location> {
-        for (line_index, line) in self.lines.iter().enumerate().skip(from.line_index) {
-            let from_grapheme_index = if line_index == from.line_index {
+    pub fn save(&mut self) -> Result<(), Error> {
+        if let Some(name) = &self.file_info.path {
+            let mut path = File::create(name)?;
+            for line in &self.lines {
+                writeln!(path, "{line}")?;
+            }
+            self.dirty = false;
+        }
+        Ok(())
+    }
+
+    // === Search === //
+
+    pub(crate) fn search_forward(&self, from: Location, query: &Line) -> Option<Location> {
+        if query.is_empty() {
+            return None;
+        }
+
+        let mut is_first = true;
+        for (index, line) in self
+            .lines
+            .iter()
+            .enumerate()
+            .cycle()
+            .skip(from.line_index)
+            .take(self.lines.len().saturating_add(1))
+        {
+            let from_grapheme_index = if is_first {
+                is_first = false;
                 from.grapheme_index
             } else {
                 0
             };
-            if let Some(grapheme_index) = line.search(from_grapheme_index, query) {
+
+            if let Some(grapheme_index) = line.search_forward(from_grapheme_index, query) {
                 return Some(Location {
-                    line_index,
                     grapheme_index,
+                    line_index: index,
                 });
             }
         }
-        for (line_index, line) in self.lines.iter().enumerate() {
-            if line_index <= from.line_index {
-                if let Some(grapheme_index) = line.search(0, query) {
-                    return Some(Location {
-                        line_index,
-                        grapheme_index,
-                    });
-                }
+        None
+    }
+
+    pub(crate) fn search_backwards(&self, from: Location, query: &Line) -> Option<Location> {
+        if query.is_empty() {
+            return None;
+        }
+
+        let mut is_first = true;
+        for (index, line) in self
+            .lines
+            .iter()
+            .enumerate()
+            .rev()
+            .cycle()
+            .skip(
+                self.lines
+                    .len()
+                    .saturating_sub(from.line_index)
+                    .saturating_sub(1),
+            )
+            .take(self.lines.len().saturating_add(1))
+        {
+            let from_grapheme_index = if is_first {
+                is_first = false;
+                from.grapheme_index
+            } else {
+                line.grapheme_count()
+            };
+
+            if let Some(grapheme_index) = line.search_backward(from_grapheme_index, query) {
+                return Some(Location {
+                    grapheme_index,
+                    line_index: index,
+                });
             }
         }
         None

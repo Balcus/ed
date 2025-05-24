@@ -14,6 +14,13 @@ use std::io::Error;
 pub const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[derive(Default, Eq, PartialEq, Clone, Copy)]
+pub enum SearchDirection {
+    #[default]
+    Forward,
+    Backward,
+}
+
 #[derive(Default)]
 pub struct View {
     buffer: Buffer,
@@ -109,7 +116,7 @@ impl View {
         self.search_info = Some(SearchInfo {
             prev_location: self.text_location,
             prev_scroll_offset: self.scroll_offset,
-            query: Line::default(),
+            query: None,
         });
     }
 
@@ -119,28 +126,9 @@ impl View {
 
     pub fn search(&mut self, query: &str) {
         if let Some(search_info) = &mut self.search_info {
-            search_info.query = Line::from(query);
+            search_info.query = Some(Line::from(query));
         }
-        self.search_from(self.text_location);
-    }
-
-    pub fn search_from(&mut self, from: Location) {
-        if let Some(search_info) = self.search_info.as_ref() {
-            let query = &search_info.query;
-            if query.is_empty() {
-                return;
-            }
-
-            if let Some(location) = self.buffer.search(&from, query) {
-                self.text_location = location;
-                self.center_text_location();
-            }
-        } else {
-            #[cfg(debug_assertions)]
-            {
-                panic!("Attempting to use search_from with no search_info!");
-            }
-        }
+        self.search_in_direction(self.text_location, SearchDirection::default());
     }
 
     fn center_text_location(&mut self) {
@@ -150,30 +138,53 @@ impl View {
         let horizontal_center = width.div_ceil(2);
         self.scroll_offset.row = row.saturating_sub(vertical_center);
         self.scroll_offset.col = col.saturating_sub(horizontal_center);
+        self.scroll_text_location_into_view();
         self.mark_redraw(true);
     }
 
     pub fn search_next(&mut self) {
-        let step_right;
-
-        if let Some(serach_info) = self.search_info.as_ref() {
-            step_right = min(serach_info.query.grapheme_count(), 1);
-        } else {
-            #[cfg(debug_assertions)]
-            {
-                panic!("Attempting to use search_next with no search_info!")
-            }
-            #[cfg(not(debug_assertions))]
-            {
-                return;
-            }
-        }
+        let step_right = self
+            .get_search_query()
+            .map_or(1, |query| min(query.grapheme_count(), 1));
 
         let location = Location {
             line_index: self.text_location.line_index,
             grapheme_index: self.text_location.grapheme_index.saturating_add(step_right),
         };
-        self.search_from(location);
+        self.search_in_direction(location, SearchDirection::Forward);
+    }
+
+    pub(crate) fn search_prev(&mut self) {
+        self.search_in_direction(self.text_location, SearchDirection::Backward);
+    }
+
+    fn search_in_direction(&mut self, from: Location, direction: SearchDirection) {
+        if let Some(location) = self.get_search_query().and_then(|query| {
+            if query.is_empty() {
+                return None;
+            }
+            match direction {
+                SearchDirection::Forward => self.buffer.search_forward(from, query),
+                SearchDirection::Backward => self.buffer.search_backwards(from, query),
+            }
+        }) {
+            self.text_location = location;
+            self.center_text_location();
+        };
+    }
+
+    fn get_search_query(&self) -> Option<&Line> {
+        let query = self
+            .search_info
+            .as_ref()
+            .and_then(|search_info| search_info.query.as_ref());
+
+        debug_assert!(
+            query.is_some(),
+            "Attempting to search with malformed query!"
+        );
+
+        query
     }
 
     // === Command Handlers === //

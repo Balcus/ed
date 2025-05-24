@@ -28,7 +28,7 @@ mod ui_component;
 fn main() {
     let mut ed = MultiEditor::new();
     let files = args::parse_args();
-    ed.load(files);
+    ed.load(&files);
     MultiEditor::init().unwrap();
     ed.run();
 }

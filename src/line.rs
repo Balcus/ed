@@ -46,16 +46,6 @@ impl Line {
         }
     }
 
-    pub fn search(&self, from_grapheme_index: GraphemeIndex, query: &str) -> Option<GraphemeIndex> {
-        let start_byte_index = self.grapheme_to_byte_idx(from_grapheme_index);
-        self.string
-            .get(start_byte_index..)
-            .and_then(|substr| substr.find(query))
-            .map(|byte_index| {
-                self.byte_to_grapheme_idx(byte_index.saturating_add(start_byte_index))
-            })
-    }
-
     pub fn byte_to_grapheme_idx(&self, byte_index: ByteIndex) -> GraphemeIndex {
         self.fragments
             .iter()
@@ -69,7 +59,7 @@ impl Line {
             .map_or(0, |fragment| fragment.start_byte_idx)
     }
 
-    pub fn get_fragments(&self) -> &Vec<TextFragment> {
+    pub const fn get_fragments(&self) -> &Vec<TextFragment> {
         &self.fragments
     }
 
@@ -209,6 +199,42 @@ impl Line {
         } else {
             Self::default()
         }
+    }
+
+    pub fn search_forward(
+        &self,
+        from_grapheme_idx: GraphemeIndex,
+        query: &str,
+    ) -> Option<GraphemeIndex> {
+        debug_assert!(from_grapheme_idx <= self.grapheme_count());
+        if from_grapheme_idx == self.grapheme_count() {
+            return None;
+        }
+        let start_byte_idx = self.grapheme_to_byte_idx(from_grapheme_idx);
+        self.string
+            .get(start_byte_idx..)
+            .and_then(|substr| substr.find(query))
+            .map(|byte_idx| self.byte_to_grapheme_idx(byte_idx.saturating_add(start_byte_idx)))
+    }
+    pub fn search_backward(
+        &self,
+        from_grapheme_idx: GraphemeIndex,
+        query: &str,
+    ) -> Option<GraphemeIndex> {
+        debug_assert!(from_grapheme_idx <= self.grapheme_count());
+
+        if from_grapheme_idx == 0 {
+            return None;
+        }
+        let end_byte_index = if from_grapheme_idx == self.grapheme_count() {
+            self.string.len()
+        } else {
+            self.grapheme_to_byte_idx(from_grapheme_idx)
+        };
+        self.string
+            .get(..end_byte_index)
+            .and_then(|substr| substr.match_indices(query).last())
+            .map(|(index, _)| self.byte_to_grapheme_idx(index))
     }
 }
 

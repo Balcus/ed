@@ -2,7 +2,7 @@ use crate::command_bar::CommandBar;
 use crate::editor_commands::{
     Command::{self, Edit, Move, System},
     Edit::Enter,
-    Move::Down,
+    Move::{Down, Up},
     System::{Dismiss, Quit, Resize, Save, Search, ShowLineNumbers},
 };
 use crate::message_bar::MessageBar;
@@ -64,7 +64,7 @@ impl Editor {
         self.status_bar.mark_redraw(val);
     }
 
-    pub fn get_message_bar(&mut self) -> &mut MessageBar {
+    pub const fn get_message_bar(&mut self) -> &mut MessageBar {
         &mut self.message_bar
     }
 
@@ -102,13 +102,13 @@ impl Editor {
             self.view.render(0);
         }
 
-        let new_caret_position = if !self.in_prompt() {
-            self.view.get_caret_position()
-        } else {
+        let new_caret_position = if self.in_prompt() {
             Position {
                 row: bottom_bar_row,
                 col: self.command_bar.caret_position_col(),
             }
+        } else {
+            self.view.get_caret_position()
         };
 
         let _ = Terminal::move_caret(new_caret_position);
@@ -160,7 +160,6 @@ impl Editor {
 
     fn process_command_during_search(&mut self, command: Command) {
         match command {
-            System(Quit | Resize(_) | Search | Save | ShowLineNumbers) => {}
             System(Dismiss) => {
                 self.set_prompt(PromptType::None);
                 self.view.dimiss_search();
@@ -174,10 +173,9 @@ impl Editor {
                 let query = self.command_bar.value();
                 self.view.search(&query);
             }
-            Move(Down) => {
-                self.view.search_next();
-            }
-            Move(_) => {}
+            Move(Down) => self.view.search_next(),
+            Move(Up) => self.view.search_prev(),
+            Move(_) | System(Quit | Resize(_) | Search | Save | ShowLineNumbers) => {}
         }
     }
 
@@ -248,7 +246,7 @@ impl Editor {
         self.view.toggle_line_numbers();
     }
 
-    fn reset_quit_times(&mut self) {
+    const fn reset_quit_times(&mut self) {
         self.quit_times = 0;
     }
 
@@ -258,7 +256,7 @@ impl Editor {
             PromptType::Save => self.command_bar.set_prompt("Save as: "),
             PromptType::Search => {
                 self.view.enter_search();
-                self.command_bar.set_prompt("Find: ")
+                self.command_bar.set_prompt("Find: ");
             }
         }
         self.command_bar.clear_value();

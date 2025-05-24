@@ -54,7 +54,7 @@ impl MultiEditor {
         &mut self.editors[self.active_editor]
     }
 
-    pub fn load(&mut self, file_names: Vec<String>) {
+    pub fn load(&mut self, file_names: &[String]) {
         if file_names.is_empty() {
             return;
         }
@@ -88,10 +88,10 @@ impl MultiEditor {
 
             match read() {
                 Ok(event) => self.evaluate_event(event),
-                Err(err) => {
+                Err(e) => {
                     #[cfg(debug_assertions)]
                     {
-                        panic!("Could not read event. Error: {err:?}")
+                        panic!("Could not read event. Error: {e:?}")
                     }
                 }
             }

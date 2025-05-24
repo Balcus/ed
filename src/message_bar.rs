@@ -1,6 +1,6 @@
-use std::time::{Duration, Instant};
-use crate::{terminal::Terminal, ui_component::UiComponent};
 use crate::size::Size;
+use crate::{terminal::Terminal, ui_component::UiComponent};
+use std::time::{Duration, Instant};
 
 const DEFAULT_DURATION: Duration = Duration::new(3, 0);
 
@@ -41,8 +41,8 @@ impl MessageBar {
         self.message_cleared = false;
         self.mark_redraw(true);
     }
-    
-    pub(crate) fn set_needs_redraw(&mut self, value: bool) {
+
+    pub(crate) const fn set_needs_redraw(&mut self, value: bool) {
         self.needs_redraw = value;
     }
 }

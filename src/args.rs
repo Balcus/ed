@@ -23,7 +23,7 @@ pub enum Command {
     },
 }
 
-pub(crate) fn parse_args() -> Vec<String> {
+pub fn parse_args() -> Vec<String> {
     let args = Args::parse();
     match args.command {
         Command::Open { file_names } => file_names
