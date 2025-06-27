@@ -1,6 +1,6 @@
-use crate::file_info::FileInfo;
 use crate::line::Line;
-use crate::location::Location;
+use crate::view::file_info::FileInfo;
+use crate::view::location::Location;
 use std::fs::File;
 use std::io::Write;
 use std::{char, fs::read_to_string, io::Error};

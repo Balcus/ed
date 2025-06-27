@@ -1,8 +1,8 @@
+use crate::command::Edit::{self, Backspace, Delete, Enter, Insert, RemoveLine};
 use crate::line::Line;
-use crate::ui_component::UiComponent;
-use crate::terminal::Terminal;
 use crate::size::Size;
-use crate::editor_commands::Edit::{self, Insert, Delete, Backspace, Enter, RemoveLine};
+use crate::terminal::Terminal;
+use crate::ui_component::UiComponent;
 use std::cmp::min;
 use std::io::Error;
 
@@ -52,7 +52,7 @@ impl UiComponent for CommandBar {
 impl CommandBar {
     pub fn handle_edit_command(&mut self, command: Edit) {
         match command {
-            Insert(c) =>  {
+            Insert(c) => {
                 self.value.append_char(c);
                 self.mark_redraw(true);
             }
@@ -65,7 +65,10 @@ impl CommandBar {
     }
 
     pub fn caret_position_col(&self) -> usize {
-        let max_width = self.prompt.len().saturating_add(self.value.grapheme_count());
+        let max_width = self
+            .prompt
+            .len()
+            .saturating_add(self.value.grapheme_count());
         min(max_width, self.size.width)
     }
 

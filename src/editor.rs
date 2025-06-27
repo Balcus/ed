@@ -1,10 +1,10 @@
-use crate::command_bar::CommandBar;
-use crate::editor_commands::{
-    Command::{self, Edit, Move, System},
+use crate::command::{
+    Command::{self, Edit, Move, MultiEditorCommand, System},
     Edit::Enter,
     Move::{Down, Up},
     System::{Dismiss, Quit, Resize, Save, Search, ShowLineNumbers},
 };
+use crate::command_bar::CommandBar;
 use crate::message_bar::MessageBar;
 use crate::position::Position;
 use crate::size::Size;
@@ -17,6 +17,7 @@ const TIMES_FOR_QUIT: u8 = 2;
 
 #[derive(PartialEq, Eq, Default)]
 enum PromptType {
+    ReadPath,
     Search,
     Save,
     #[default]
@@ -40,6 +41,7 @@ pub struct Editor {
     command_bar: CommandBar,
     prompt_type: PromptType,
     quit_times: u8,
+    file_path: Option<String>,
 }
 
 impl Editor {
@@ -89,7 +91,9 @@ impl Editor {
 
         match self.prompt_type {
             PromptType::None => self.message_bar.render(bottom_bar_row),
-            PromptType::Save | PromptType::Search => self.command_bar.render(bottom_bar_row),
+            PromptType::Save | PromptType::Search | PromptType::ReadPath => {
+                self.command_bar.render(bottom_bar_row)
+            }
         }
 
         if self.terminal_size.height > 1 {
@@ -133,6 +137,7 @@ impl Editor {
         self.reset_quit_times();
 
         match command {
+            MultiEditorCommand(_) => {}
             System(Quit | Resize(_) | Dismiss) => {}
             System(Search) => self.set_prompt(PromptType::Search),
             System(Save) => self.handle_save_command(),
@@ -144,6 +149,7 @@ impl Editor {
 
     fn process_command_during_save(&mut self, command: Command) {
         match command {
+            MultiEditorCommand(_) => {}
             System(Quit | Resize(_) | Search | Save | ShowLineNumbers) | Move(_) => {}
             System(Dismiss) => {
                 self.set_prompt(PromptType::None);
@@ -158,8 +164,28 @@ impl Editor {
         }
     }
 
+    fn process_command_during_path_read(&mut self, command: Command) {
+        match command {
+            MultiEditorCommand(_) => {}
+            System(Quit | Resize(_) | Search | Save | ShowLineNumbers) | Move(_) => {}
+            System(Dismiss) => {
+                self.set_prompt(PromptType::None);
+                self.message_bar.update_message("Open aborted!");
+            }
+            Edit(Enter) => {
+                let file_name = self.command_bar.value();
+                self.file_path = Some(file_name.clone());
+                self.set_prompt(PromptType::None);
+                self.message_bar
+                    .update_message(&format!("Opening file: {}", file_name));
+            }
+            Edit(edit_command) => self.command_bar.handle_edit_command(edit_command),
+        }
+    }
+
     fn process_command_during_search(&mut self, command: Command) {
         match command {
+            MultiEditorCommand(_) => {}
             System(Dismiss) => {
                 self.set_prompt(PromptType::None);
                 self.view.dimiss_search();
@@ -188,6 +214,7 @@ impl Editor {
         match self.prompt_type {
             PromptType::None => self.process_command_no_prompt(command),
             PromptType::Save => self.process_command_during_save(command),
+            PromptType::ReadPath => self.process_command_during_path_read(command),
             PromptType::Search => self.process_command_during_search(command),
         }
     }
@@ -258,8 +285,17 @@ impl Editor {
                 self.view.enter_search();
                 self.command_bar.set_prompt("Find: ");
             }
+            PromptType::ReadPath => self.command_bar.set_prompt("Enter file to open: "),
         }
         self.command_bar.clear_value();
         self.prompt_type = prompt_type;
+    }
+
+    pub fn start_file_open(&mut self) {
+        self.set_prompt(PromptType::ReadPath);
+    }
+
+    pub(crate) fn read_path(&mut self) -> Option<String> {
+        return self.file_path.take();
     }
 }

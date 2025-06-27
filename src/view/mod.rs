@@ -1,25 +1,26 @@
-use crate::buffer::Buffer;
-use crate::document_status::DocumentStatus;
-use crate::editor_commands::{Edit, Move};
-use crate::line::Line;
-use crate::location::Location;
-use crate::position::Position;
-use crate::serach_info::SearchInfo;
-use crate::size::Size;
-use crate::terminal::Terminal;
-use crate::ui_component::UiComponent;
-use std::cmp::min;
-use std::io::Error;
+mod buffer;
+use std::{cmp::min, io::Error};
+mod file_info;
+use buffer::Buffer;
+mod location;
+use location::Location;
+mod search_direction;
+mod serach_info;
+use search_direction::SearchDirection;
+use serach_info::SearchInfo;
+
+use crate::{
+    command::{Edit, Move},
+    document_status::DocumentStatus,
+    line::Line,
+    position::Position,
+    size::Size,
+    terminal::Terminal,
+    ui_component::UiComponent,
+};
 
 pub const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-
-#[derive(Default, Eq, PartialEq, Clone, Copy)]
-pub enum SearchDirection {
-    #[default]
-    Forward,
-    Backward,
-}
 
 #[derive(Default)]
 pub struct View {

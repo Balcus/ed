@@ -1,3 +1,8 @@
+mod grapheme_width;
+use grapheme_width::GraphemeWidth;
+mod text_fragment;
+use text_fragment::TextFragment;
+
 use std::{
     fmt,
     ops::{Deref, Range},
@@ -7,29 +12,6 @@ use unicode_width::UnicodeWidthStr;
 
 type GraphemeIndex = usize;
 type ByteIndex = usize;
-
-#[derive(Copy, Clone)]
-enum GraphemeWidth {
-    Half,
-    Full,
-}
-
-impl GraphemeWidth {
-    const fn saturating_add(self, other: usize) -> usize {
-        match self {
-            Self::Half => other.saturating_add(1),
-            Self::Full => other.saturating_add(2),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct TextFragment {
-    pub grapheme: String,
-    rendered_width: GraphemeWidth,
-    pub replacement: Option<char>,
-    start_byte_idx: usize,
-}
 
 #[derive(Default, Clone)]
 pub struct Line {
@@ -126,7 +108,6 @@ impl Line {
             }
             if fragment_end > range.start {
                 if fragment_end > range.end || current_pos < range.start {
-                    // Clip on the right or left
                     result.push('⋯');
                 } else if let Some(char) = fragment.replacement {
                     result.push(char);

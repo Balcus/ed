@@ -1,5 +1,5 @@
 use crate::line::Line;
-use crate::{location::Location, position::Position};
+use crate::{position::Position, view::location::Location};
 
 pub struct SearchInfo {
     pub prev_location: Location,

@@ -1,11 +1,17 @@
-use crate::editor_commands::{
-    Command::System,
+use crate::command::{
+    Command::{MultiEditorCommand, System},
+    MultiEditorEvent::{LeftTab, NewTab, Open, RightTab},
     System::{Quit, Resize},
 };
-use crate::{editor::Editor, editor_commands::Command, size::Size, terminal::Terminal};
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, read};
+use crate::{command::Command, editor::Editor, size::Size, terminal::Terminal};
+use crossterm::event::{Event, KeyEvent, read};
 use std::io::Error;
 use std::vec;
+
+// BIG TODO: currently the way multieditor works violates the layered arhitecture used so far
+// Need to refactor the code so that the message and status bar are attributes of the
+// multi editor, NOT CHANGING for each separate window. The multieditor should
+// forward requests from the command bar to the current active editor
 
 pub struct MultiEditor {
     editors: Vec<Editor>,
@@ -99,41 +105,6 @@ impl MultiEditor {
     }
 
     fn evaluate_event(&mut self, event: Event) {
-        if let Event::Key(KeyEvent {
-            code: KeyCode::Char('p'),
-            modifiers: KeyModifiers::CONTROL,
-            kind: crossterm::event::KeyEventKind::Press,
-            ..
-        }) = event
-        {
-            let editor_index = self.active_editor.saturating_add(1);
-            self.switch_editor(editor_index);
-            return;
-        }
-
-        if let Event::Key(KeyEvent {
-            code: KeyCode::Char('o'),
-            modifiers: KeyModifiers::CONTROL,
-            kind: crossterm::event::KeyEventKind::Press,
-            ..
-        }) = event
-        {
-            let editor_index = self.active_editor.saturating_sub(1);
-            self.switch_editor(editor_index);
-            return;
-        }
-
-        if let Event::Key(KeyEvent {
-            code: KeyCode::Char('n'),
-            modifiers: KeyModifiers::CONTROL,
-            kind: crossterm::event::KeyEventKind::Press,
-            ..
-        }) = event
-        {
-            self.create_new_editor();
-            return;
-        }
-
         let should_process = match &event {
             Event::Key(KeyEvent { kind, .. }) => kind == &crossterm::event::KeyEventKind::Press,
             Event::Resize(_, _) => true,
@@ -167,6 +138,18 @@ impl MultiEditor {
 
     fn process_command(&mut self, command: Command) {
         match command {
+            MultiEditorCommand(NewTab) => self.create_new_editor(),
+            MultiEditorCommand(LeftTab) => {
+                if self.active_editor > 0 {
+                    self.switch_editor(self.active_editor - 1);
+                }
+            }
+            MultiEditorCommand(RightTab) => {
+                if self.active_editor + 1 < self.editors.len() {
+                    self.switch_editor(self.active_editor + 1);
+                }
+            }
+            MultiEditorCommand(Open) => self.active_editor().start_file_open(),
             System(Quit) => {
                 self.active_editor().process_command(command);
 
@@ -186,8 +169,25 @@ impl MultiEditor {
             System(Resize(size)) => {
                 self.resize(size);
             }
-            _ => self.active_editor().process_command(command),
+
+            _ => {
+                self.active_editor().process_command(command);
+
+                if let Some(path) = self.active_editor().read_path() {
+                    self.open_file(path);
+                }
+            }
         }
+    }
+
+    fn open_file(&mut self, path: String) {
+        self.create_new_editor();
+        self.active_editor = self.editors.len() - 1;
+        self.active_editor().load(&path);
+
+        let _ = Terminal::clear();
+        self.active_editor().set_needs_redraw(true);
+        self.change_editor_message(&format!("Opened file: {}", path));
     }
 }
 
