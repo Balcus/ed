@@ -4,8 +4,7 @@
 
 SIMPLE, lightweight terminal text editor.
 
-<!-- TODO: add GIF here (asciinema) -->
-<!-- ![demo](assets/demo.gif) -->
+![demo](assets/demo.gif)
 
 ## Tech stack
  
